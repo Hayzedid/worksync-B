@@ -1,8 +1,8 @@
-import { verifyToken } from '../utils/helpers'
-import { pool } from '../config/database'
+import { verifyToken } from '../utils/helpers.js'
+import { pool } from '../config/database.js'
 
 
-async function authenticateToken(res, req, next) {
+async function authenticateToken(req, res, next) {
     try{
         const authHeader = req.headers['authorization']
         const  token = authHeader && authHeader.split(' ')[1]
@@ -19,7 +19,7 @@ async function authenticateToken(res, req, next) {
         const decoded = verifyToken(token)
         const [users] = await pool.execute(
                'SELECT id, email, first_name, last_name, is_active FROM users WHERE id = ?',
-            [decoded.userId]
+            [decoded.id]
             
         )
 
@@ -45,3 +45,5 @@ async function authenticateToken(res, req, next) {
 
     
 }
+
+export default authenticateToken;

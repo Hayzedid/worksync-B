@@ -20,7 +20,7 @@ export const generateToken = (user) => {
     }
 }
 
-// export default {
-//     generateToken,
-//     verifyToken
-// };
+export default {
+    generateToken,
+    verifyToken
+};
