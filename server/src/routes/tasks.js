@@ -1,17 +1,21 @@
 import express from 'express';
-import authenticateToken from '../middleware/auth.js';
 import {
-  createTask,
-  getProjectTasks,
-  updateTask,
-  deleteTask
+    getTasks,
+    getSingleTask,
+    createNewTask,
+    updateTaskById,
+    deleteTaskById
 } from '../controllers/taskController.js';
+import authenticateToken from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/projects/:projectId/tasks', authenticateToken, createTask);
-router.get('/projects/:projectId/tasks', authenticateToken, getProjectTasks);
-router.put('/tasks/:taskId', authenticateToken, updateTask);
-router.delete('/tasks/:taskId', authenticateToken, deleteTask);
+router.use(authenticateToken);
+
+router.get('/', getTasks);
+router.get('/:id', getSingleTask);
+router.post('/', createNewTask);
+router.put('/:id', updateTaskById);
+router.delete('/:id', deleteTaskById);
 
 export default router;

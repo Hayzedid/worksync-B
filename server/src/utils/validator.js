@@ -1,27 +1,16 @@
-import { genSalt, hash, compare } from 'bcrypt';
-const SALT_ROUNDS = 10;
+// src/utils/validator.js
+import { body } from 'express-validator';
 
-async function hashPassword(password) {
-    try{
-        const salt = await genSalt(SALT_ROUNDS);
-        const hashedPassword = await hash(password, salt)
-        return hashedPassword;
-    } catch (error) {
-        throw new Error('Error hashing password');
-    }
-}
+export const validateRegister = [
+  body('email').isEmail().withMessage('Invalid email'),
+  body('password')
+    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('firstName').notEmpty().withMessage('First name is required'),
+  body('lastName').notEmpty().withMessage('Last name is required'),
+  body('userName').notEmpty().withMessage('Username is required')
+];
 
-
-
-
-async function verifyPassword(password, hashedPassword) {
-    try {
-        const isMatch = await compare(password, hashedPassword);
-        return isMatch;
-    } catch (error) {
-        throw new Error('Error verifying password');
-    }
-}
-
-
-export { hashPassword, verifyPassword };
+export const validateLogin = [
+  body('email').isEmail().withMessage('Invalid email'),
+  body('password').notEmpty().withMessage('Password is required')
+];

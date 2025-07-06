@@ -2,14 +2,14 @@
 import { Router } from 'express';
 const router = Router();
 import { getAllProjects, 
-    getProjectById, createProject, updateProject, deleteProject } from '../controllers/projectController.js';
+    getProject, createProject, updateProject, deleteProject } from '../controllers/projectController.js';
 import authenticate from '../middleware/auth.js';
 
 // All routes require JWT authentication
 router.use(authenticate);
 
 router.get('/', getAllProjects);
-router.get('/:id', getProjectById);
+router.get('/:id', getProject);
 router.post('/', createProject);
 router.put('/:id', updateProject);
 router.delete('/:id', deleteProject);

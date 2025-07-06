@@ -5,10 +5,13 @@ import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
 import projectRoutes from './routes/projects.js';
 import taskRoutes from './routes/tasks.js';
+import noteRoutes from './routes/notes.js';
+import userRoutes from './routes/users.js';
+import { devLogger } from './middleware/logger.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { generalLimiter, authLimiter } from './middleware/rateLimiter.js';
 import dotenv from 'dotenv';
 dotenv.config({ path: './src/.env' });
-
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -16,11 +19,17 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(json());
 app.use(urlencoded({ extended: true }));
+app.use(devLogger); 
+app.use(generalLimiter); // Apply globally
 
 // Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes); // Stricter limit for login/signup
 app.use('/api/projects', projectRoutes);
 app.use('/api', taskRoutes);
+app.use('/api/notes', noteRoutes);
+app.use('/api/users', userRoutes);
+
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ status: 'Server is running', timestamp: new Date().toISOString() });
@@ -43,3 +52,6 @@ async function startServer() {
 }
 
 startServer();
+
+
+app.use(errorHandler);

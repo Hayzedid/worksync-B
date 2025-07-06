@@ -1,67 +1,89 @@
-import { pool } from '../config/database.js';
+// controllers/taskController.js
+import {
+    getAllTasksByUser,
+    getTaskById,
+    createTask,
+    updateTask,
+    deleteTask
+} from '../models/Task.js';
 
-// Create a task
-export const createTask = async (req, res) => {
-  const { projectId } = req.params;
-  const { title, description, due_date } = req.body;
+export async function getTasks(req, res) {
+    try {
+        const tasks = await getAllTasksByUser(req.user.id);
+        res.json({ success: true, tasks });
+    } catch (err) {
+         next(err);
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+}
 
-  if (!title) {
-    return res.status(400).json({ success: false, message: 'Title is required' });
-  }
+export async function getSingleTask(req, res) {
+    try {
+        const task = await getTaskById(req.params.id);
+        if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
 
-  try {
-    const [result] = await pool.execute(
-      `INSERT INTO tasks (project_id, title, description, due_date) VALUES (?, ?, ?, ?)`,
-      [projectId, title, description || null, due_date || null]
-    );
+        res.json({ success: true, task });
+    } catch (err) {
+         next(err);
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+}
 
-    res.status(201).json({ success: true, message: 'Task created successfully', taskId: result.insertId });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
-  }
-};
+export async function createNewTask(req, res) {
+    try {
+        const { title, description, due_date, status } = req.body;
+        if (!title) return res.status(400).json({ success: false, message: 'Title is required' });
 
-// Get all tasks for a project
-export const getProjectTasks = async (req, res) => {
-  const { projectId } = req.params;
+        const taskId = await createTask({
+            title,
+            description,
+            due_date,
+            status,
+            created_by: req.user.id
+        });
 
-  try {
-    const [tasks] = await pool.execute(
-      `SELECT * FROM tasks WHERE project_id = ? ORDER BY created_at DESC`,
-      [projectId]
-    );
+        res.status(201).json({ success: true, message: 'Task created', taskId });
+    } catch (err) {
+         next(err);
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+}
 
-    res.json({ success: true, tasks });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
-  }
-};
+export async function updateTaskById(req, res) {
+    try {
+        const { title, description, due_date, status } = req.body;
+        const taskId = req.params.id;
 
-// Update a task
-export const updateTask = async (req, res) => {
-  const { taskId } = req.params;
-  const { title, description, due_date, status } = req.body;
+        const affectedRows = await updateTask(taskId, { title, description, due_date, status });
+        if (affectedRows === 0) return res.status(404).json({ success: false, message: 'Task not found or unchanged' });
 
-  try {
-    await pool.execute(
-      `UPDATE tasks SET title = ?, description = ?, due_date = ?, status = ? WHERE id = ?`,
-      [title, description, due_date, status, taskId]
-    );
+        res.json({ success: true, message: 'Task updated' });
+    } catch (err) {
+         next(err);
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+}
 
-    res.json({ success: true, message: 'Task updated successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
-  }
-};
+export async function deleteTaskById(req, res) {
+    try {
+        const taskId = req.params.id;
+        const affectedRows = await deleteTask(taskId);
 
-// Delete a task
-export const deleteTask = async (req, res) => {
-  const { taskId } = req.params;
+        if (affectedRows === 0) return res.status(404).json({ success: false, message: 'Task not found' });
 
-  try {
-    await pool.execute(`DELETE FROM tasks WHERE id = ?`, [taskId]);
-    res.json({ success: true, message: 'Task deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
-  }
-};
+        res.json({ success: true, message: 'Task deleted' });
+    } catch (err) {
+         next(err);
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+}
+export async function getTasksByProject(req, res) {
+    try {
+        const projectId = req.params.projectId;
+        const tasks = await getAllTasksByUser(req.user.id, projectId);
+        res.json({ success: true, tasks });
+    } catch (err) {
+         next(err);
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+}
