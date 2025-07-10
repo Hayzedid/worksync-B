@@ -7,7 +7,7 @@ import {
   deleteProjectById
 } from '../models/Project.js';
 
-export const getAllProjects = async (req, res) => {
+export const getAllProjects = async (req, res, next) => {
   try {
     const projects = await getAllProjectsForUser(req.user.id);
     res.json({ success: true, projects });
@@ -18,7 +18,7 @@ export const getAllProjects = async (req, res) => {
   }
 };
 
-export const getProject = async (req, res) => {
+export const getProject = async (req, res, next) => {
   try {
     const project = await getProjectById(req.params.id, req.user.id);
     if (!project) {
@@ -31,7 +31,7 @@ export const getProject = async (req, res) => {
   }
 };
 
-export const createProject = async (req, res) => {
+export const createProject = async (req, res, next) => {
   const { name, description, status } = req.body;
   if (!name) {
     return res.status(400).json({ success: false, message: 'Name is required' });
@@ -56,7 +56,7 @@ export const createProject = async (req, res) => {
   }
 };
 
-export const updateProject = async (req, res) => {
+export const updateProject = async (req, res, next) => {
   const { id } = req.params;
   const { name, description, status } = req.body;
 
@@ -80,7 +80,7 @@ export const updateProject = async (req, res) => {
   }
 };
 
-export const deleteProject = async (req, res) => {
+export const deleteProject = async (req, res, next) => {
   try {
     const deleted = await deleteProjectById(req.params.id, req.user.id);
 

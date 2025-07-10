@@ -20,13 +20,65 @@ export async function getTaskById(taskId) {
 }
 
 // Create a new task
-export async function createTask({ title, description, due_date, status, created_by }) {
-    const [result] = await pool.execute(
-        'INSERT INTO tasks (title, description, due_date, status, created_by) VALUES (?, ?, ?, ?, ?)',
-        [title, description, due_date, status, created_by]
-    );
-    return result.insertId;
+export async function createTask({
+  title,
+  description,
+  due_date,
+  status,
+  created_by,
+  project_id,
+  assigned_to,
+  priority,
+  start_date,
+  completion_date,
+  estimated_hours,
+  actual_hours,
+  position,
+}) {
+  const [result] = await pool.execute(
+    `INSERT INTO tasks (
+      title,
+      description,
+      due_date,
+      status,
+      created_by,
+      project_id,
+      assigned_to,
+      priority,
+      start_date,
+      completion_date,
+      estimated_hours,
+      actual_hours,
+      position
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      title,
+      description,
+      due_date,
+      status,
+      created_by,
+      project_id,
+      assigned_to,
+      priority,
+      start_date,
+      completion_date,
+      estimated_hours,
+      actual_hours,
+      position,
+    ]
+  );
+
+  return result.insertId;
 }
+
+
+// export async function createTask({ title, description, due_date, status, created_by }) {
+//     const [result] = await pool.execute(
+//         'INSERT INTO tasks (title, description, due_date, status, created_by, project_id) VALUES (?, ?, ?, ?, ?, ?)',
+//         [title, description, due_date, status, created_by, project_id]
+//     );
+//     return result.insertId;
+// }
 
 // Update a task
 export async function updateTask(taskId, { title, description, due_date, status }) {

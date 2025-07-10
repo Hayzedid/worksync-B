@@ -15,7 +15,7 @@ export const verifyToken = (token) => {
   try {
     return jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
-     next(err);
+    console.error('Token verification error:', error);
     throw new Error('Invalid token');
   }
 };

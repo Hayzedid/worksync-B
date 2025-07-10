@@ -1,6 +1,6 @@
 // src/controllers/authController.js
 import { pool } from '../config/database.js';
-import { generateToken } from '../utils/helpers.js';
+import { generateToken } from '../config/jwt.js';
 import { hashPassword, verifyPassword } from '../utils/helpers.js';
 
 export const registerUser = async (req, res, next) => {

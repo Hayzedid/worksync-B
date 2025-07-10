@@ -11,6 +11,7 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
+    charset: 'utf8mb4' // Use utf8mb4 to support emojis and special characters
 });
 
 

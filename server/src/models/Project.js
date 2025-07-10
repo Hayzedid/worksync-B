@@ -26,6 +26,7 @@ export const createNewProject = async ({ userId, name, description, status }) =>
 };
 
 export const updateProjectById = async ({ id, userId, name, description, status }) => {
+    console.log('Status to update:', status);
   const [result] = await pool.execute(
     'UPDATE projects SET name = ?, description = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND owner_id = ?',
     [name, description, status, id, userId]
