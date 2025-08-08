@@ -41,3 +41,19 @@ export const deleteProjectById = async (id, userId) => {
   );
   return result.affectedRows;
 };
+
+export async function searchProjects({ userId, q, status }) {
+  let sql = `SELECT * FROM projects WHERE owner_id = ?`;
+  const params = [userId];
+  if (q) {
+    sql += ' AND MATCH(name, description) AGAINST (? IN NATURAL LANGUAGE MODE)';
+    params.push(q);
+  }
+  if (status) {
+    sql += ' AND status = ?';
+    params.push(status);
+  }
+  sql += ' ORDER BY created_at DESC';
+  const [rows] = await pool.execute(sql, params);
+  return rows;
+}

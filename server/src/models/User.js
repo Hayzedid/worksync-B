@@ -1,13 +1,10 @@
 // models/userModel.js
 import { pool } from '../config/database.js';
 
-export const getUserById = async (id) => {
-  const [rows] = await pool.execute(
-    'SELECT id, username, email, profile_picture FROM users WHERE id = ?',
-    [id]
-  );
+export async function getUserById(userId) {
+  const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [userId]);
   return rows[0];
-};
+}
 
 export const updateUser = async (id, username, profile_picture) => {
   const [result] = await pool.execute(

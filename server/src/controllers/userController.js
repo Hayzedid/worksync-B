@@ -6,6 +6,7 @@ import {
   getPublicUserById,
   deleteUserById
 } from '../models/User.js';
+import { getOnlineUsers } from '../socket/socketHandler.js';
 
 export const getCurrentUser = async (req, res, next) => {
   console.log('User from token:', req.user);
@@ -16,7 +17,6 @@ export const getCurrentUser = async (req, res, next) => {
   } catch (error) {
        console.error('Error in getCurrentUser:', error);
      next(error);
-    // res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
@@ -39,7 +39,6 @@ export const updateUserProfile = async (req, res, next) => {
     res.json({ success: true, message: 'Profile updated', user });
   } catch (error) {
      next(error);
-    // res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
@@ -49,7 +48,6 @@ export const getAllUsersController = async (req, res, next) => {
     res.json({ success: true, users });
   } catch (error) {
      next(error);
-    // res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
@@ -65,7 +63,6 @@ export const getUserByIdController = async (req, res, next) => {
     res.json({ success: true, user });
   } catch (error) {
      next(error);
-    // res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 
@@ -81,6 +78,14 @@ export const deleteUserController = async (req, res, next) => {
     res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
      next(error);
-    // res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
+
+export async function getOnlineUsersController(req, res, next) {
+  try {
+    const onlineUsers = getOnlineUsers();
+    res.json({ success: true, onlineUsers });
+  } catch (error) {
+    next(error);
+  }
+}

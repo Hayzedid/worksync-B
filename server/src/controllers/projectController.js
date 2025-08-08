@@ -4,7 +4,8 @@ import {
   getProjectById,
   createNewProject,
   updateProjectById,
-  deleteProjectById
+  deleteProjectById,
+  searchProjects
 } from '../models/Project.js';
 
 export const getAllProjects = async (req, res, next) => {
@@ -94,3 +95,14 @@ export const deleteProject = async (req, res, next) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+export async function searchProjectsController(req, res, next) {
+  try {
+    const { q, status } = req.query;
+    const userId = req.user.id;
+    const projects = await searchProjects({ userId, q, status });
+    res.json({ success: true, projects });
+  } catch (error) {
+    next(error);
+  }
+}

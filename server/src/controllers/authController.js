@@ -42,9 +42,8 @@ export const registerUser = async (req, res, next) => {
       }
     });
   } catch (err) {
+    console.error('Error registering user:', err); // Debug log
     next(err); // Pass the error to the error handling middleware
-    console.error('Error registering user:', err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
@@ -85,8 +84,7 @@ export const loginUser = async (req, res, next) => {
       }
     });
   } catch (err) {
+    console.error('Error logging in:', err); // Debug log
     next(err); // Pass the error to the error handling middleware
-    console.error('Error logging in:', err);
-    res.status(500).json({ success: false, message: 'Login failed. Please try again later.' });
   }
 };

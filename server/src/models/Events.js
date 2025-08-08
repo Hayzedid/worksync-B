@@ -55,3 +55,16 @@ export const getEventsByDateRange = async (start, end) => {
   )
   return rows
 }
+
+export async function getRecurringEvents() {
+  const [rows] = await pool.execute('SELECT * FROM events WHERE recurrence IS NOT NULL');
+  return rows;
+}
+
+export async function createEventInstance(event) {
+  // Example: create a new event based on the recurring event
+  await pool.execute(
+    'INSERT INTO events (title, description, start_time, end_time, created_by, recurrence) VALUES (?, ?, ?, ?, ?, ?)',
+    [event.title, event.description, event.start_time, event.end_time, event.created_by, event.recurrence]
+  );
+}

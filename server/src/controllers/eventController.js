@@ -1,7 +1,7 @@
 // controllers/eventController.js
 import * as Event from '../models/Events.js'
 
-export const create = async (req, res, next) => {
+export const create = async (req, res) => {
   const { title, start, end } = req.body
    console.log('req.body:', req.body);            // ✅ Log body
   console.log('req.user:', req.user); 
@@ -40,7 +40,7 @@ export const getById = async (req, res, next) => {
   }
 }
 
-export const update = async (req, res, next) => {
+export const update = async (req, res) => {
   const { title, start_date, end_date } = req.body;
   const id = req.params.id;
   const owner_id = req.user?.id;
