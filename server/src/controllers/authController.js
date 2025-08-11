@@ -71,10 +71,18 @@ export const loginUser = async (req, res, next) => {
     }
 
     const token = generateToken(user);
+    
+    // Set cookie for frontend authentication
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+    
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      token,
       user: {
         id: user.id,
         email: user.email,
@@ -86,5 +94,21 @@ export const loginUser = async (req, res, next) => {
   } catch (err) {
     console.error('Error logging in:', err); // Debug log
     next(err); // Pass the error to the error handling middleware
+  }
+};
+
+export const logoutUser = async (req, res, next) => {
+  try {
+    // Clear the token cookie
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none'
+    });
+    
+    res.status(200).json({ success: true, message: 'Logout successful' });
+  } catch (err) {
+    console.error('Error logging out:', err);
+    next(err);
   }
 };

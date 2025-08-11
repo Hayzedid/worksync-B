@@ -1,27 +1,38 @@
 import { createComment, getComments } from '../models/Comment.js';
-import { io } from '../server.js';
 import { sendEmail } from '../services/emailServices.js';
+import { getOwnerByCommentable } from '../utils/helpers.js';
 import sanitizeHtml from 'sanitize-html';
 
 export async function addComment(req, res, next) {
   try {
     const cleanContent = sanitizeHtml(req.body.content || '');
-    const { type, id } = req.params; // type: 'task' or 'note'
-    const created_by = req.user.id;
-    const comment = await createComment({
+    const type = req.params.type || req.body.commentable_type; // 'task' or 'note'
+    const id = req.params.id || req.body.commentable_id;
+    const createdBy = req.user.id;
+
+    if (!type || !id) {
+      return res.status(400).json({ success: false, message: 'Missing commentable target' });
+    }
+
+    const commentId = await createComment({
       content: cleanContent,
-      commentable_type: req.params.type,
-      commentable_id: req.params.id,
-      created_by: req.user.id,
+      commentable_type: type,
+      commentable_id: id,
+      created_by: createdBy,
       parent_id: req.body.parent_id || null
     });
-    // Fetch the owner of the commentable item (implement getOwnerByCommentable in helpers or relevant model)
-    const { userId, email } = await getOwnerByCommentable(req.params.type, req.params.id);
-    // Emit real-time event
-    io.to(userId.toString()).emit('notification', { type: 'commentAdded', comment });
-    // Send email notification
-    await sendEmail(email, 'New comment on your item', `Comment: ${comment.content}`);
-    res.status(201).json({ message: 'Comment added', comment });
+
+    // Optional side-effects (best-effort; ignore failures)
+    try {
+      const owner = await getOwnerByCommentable(type, id);
+      if (owner?.email) {
+        await sendEmail({ to: owner.email, subject: 'New comment on your item', text: `Comment ID: ${commentId}` });
+      }
+    } catch {
+      // ignore side-effect errors
+    }
+
+    res.status(201).json({ success: true, commentId });
   } catch (error) {
     next(error);
   }
@@ -29,7 +40,8 @@ export async function addComment(req, res, next) {
 
 export async function fetchComments(req, res, next) {
   try {
-    const { type, id } = req.params;
+    const type = req.params.type;
+    const id = req.params.id;
     const comments = await getComments({ commentable_type: type, commentable_id: id });
     res.json({ success: true, comments });
   } catch (error) {

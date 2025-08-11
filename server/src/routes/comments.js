@@ -6,9 +6,11 @@ const router = express.Router();
 
 router.use(authenticateToken);
 
-// POST /api/:type/:id/comments (type = 'task' or 'note')
+// Align with tests expecting /api/comments with body
+router.post('/comments', addComment);
+
+// Original parameterized routes for direct access
 router.post('/:type/:id/comments', addComment);
-// GET /api/:type/:id/comments
 router.get('/:type/:id/comments', fetchComments);
 
 export default router; 

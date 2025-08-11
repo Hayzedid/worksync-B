@@ -1,6 +1,6 @@
 // server.js
 import express, { json, urlencoded } from 'express';
-import { testConnection } from './config/database.js';
+// import { testConnection } from './config/database.js';
 import authRoutes from './routes/auth.js';
 import projectRoutes from './routes/projects.js';
 import taskRoutes from './routes/tasks.js';
@@ -12,7 +12,7 @@ import workspaceRoutes from './routes/workspace.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { generalLimiter, authLimiter } from './middleware/rateLimiter.js';
 import dotenv from 'dotenv';
-dotenv.config({ path: '.env' });
+dotenv.config();
 import mycors from './middleware/mycors.js';
 import commentRoutes from './routes/comments.js';
 import tagRoutes from './routes/tags.js';
@@ -21,22 +21,22 @@ import notificationRoutes from './routes/notifications.js';
 import activityRoutes from './routes/activity.js';
 import calendarRoutes from './routes/calendar.js';
 import attachmentRoutes from './routes/attachments.js';
-import socketHandler from './socket/socketHandler.js';
+import cookieParser from 'cookie-parser';
+// import socketHandler from './socket/socketHandler.js';
 const app = express();
-const PORT = process.env.PORT || 5000;
+// const PORT = process.env.PORT || 5000;
 
-import http from 'http';
-import { Server } from 'socket.io';
+// import http from 'http';
+// import { Server } from 'socket.io';
 
 
 
 // Ensure CORS is the very first middleware
-if (process.env.NODE_ENV !== 'test') {
-  app.use(mycors); // CORS must be first
-}
+app.use(mycors); // CORS must be first
 
-app.use(json());
-app.use(urlencoded({ extended: true }));
+app.use(json({ limit: '10mb' }));
+app.use(urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 app.use(devLogger); 
 app.use(generalLimiter); // Apply globally
 

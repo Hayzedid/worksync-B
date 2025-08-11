@@ -1,6 +1,4 @@
 // socket/socketHandler.js
-import { registerSocketEvents } from './socketEvents.js';
-
 const onlineUsers = new Set();
 
 export function getOnlineUsers() {

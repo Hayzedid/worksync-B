@@ -1,6 +1,6 @@
 // src/controllers/noteController.js
 import {deleteNote, createNote, getNotes, updateNote, getAllNotesForUser, searchNotes, addMentions, getCachedSearchNotes, setCachedSearchNotes} from '../models/Note.js';
-import { io } from '../server.js';
+import { getUserById } from '../models/User.js';
 import { sendEmail } from '../services/emailServices.js';
 import sanitizeHtml from 'sanitize-html';
 
@@ -30,9 +30,10 @@ export async function create_Note(req, res, next) {
         const mentionedUserIds = extractMentionedUserIds(cleanContent);
         await addMentions(mentionedUserIds, 'note', noteId);
         mentionedUserIds.forEach(async userId => {
-          io.to(userId.toString()).emit('notification', { type: 'mention', noteId });
           const user = await getUserById(userId);
-          if (user && user.email) await sendEmail(user.email, 'You were mentioned in a note', `You were mentioned in note ${noteId}`);
+          if (user && user.email) {
+            await sendEmail({ to: user.email, subject: 'You were mentioned in a note' });
+          }
         });
         return res.status(201).json({
             success: true,
@@ -70,11 +71,12 @@ export async function update_Note(req, res, next) {
 
     const mentionedUserIds = extractMentionedUserIds(cleanContent);
     await addMentions(mentionedUserIds, 'note', noteId);
-    mentionedUserIds.forEach(async userId => {
-      io.to(userId.toString()).emit('notification', { type: 'mention', noteId });
-      const user = await getUserById(userId);
-      if (user && user.email) await sendEmail(user.email, 'You were mentioned in a note', `You were mentioned in note ${noteId}`);
-    });
+    for (const mentionedId of mentionedUserIds) {
+      const user = await getUserById(mentionedId);
+      if (user && user.email) {
+        await sendEmail({ to: user.email, subject: 'You were mentioned in a note' });
+      }
+    }
 
     return res.status(200).json({ success: true, message: "Note updated successfully" });
   } catch (error) {

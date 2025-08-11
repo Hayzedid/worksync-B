@@ -36,12 +36,11 @@ async function authenticateToken(req, res, next) {
     req.user = users[0];
     next();
   } catch (error) {
-     next(error);
-    // return res.status(401).json({
-    //   success: false,
-    //   message: 'Invalid or expired token',
-    //   ...(process.env.NODE_ENV !== 'production' && { error: error.message })
-    // });
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid or expired token',
+      ...(process.env.NODE_ENV !== 'production' && { error: error.message })
+    });
   }
 }
 

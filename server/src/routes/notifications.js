@@ -6,6 +6,9 @@ const router = express.Router();
 router.use(authenticateToken);
 
 router.get('/', getNotifications);
+// Align with tests using PUT
+router.put('/:id/read', markAsRead);
+// Keep PATCH for backward compatibility
 router.patch('/:id/read', markAsRead);
 
 export default router; 

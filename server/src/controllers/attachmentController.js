@@ -1,5 +1,5 @@
 import { createAttachment, getAttachmentsForTask, getAttachmentsForNote, deleteAttachment } from '../models/Attachment.js';
-import path from 'path';
+// path import removed; not used here
 
 export async function uploadAttachment(req, res, next) {
   try {
@@ -7,7 +7,7 @@ export async function uploadAttachment(req, res, next) {
     const uploaded_by = req.user.id;
     const file = req.file;
     if (!file) return res.status(400).json({ success: false, message: 'No file uploaded' });
-    const { originalname, filename, mimetype, path: filePath } = file;
+    const { originalname, mimetype, path: filePath } = file;
     const isTask = req.baseUrl.includes('/tasks');
     const attachmentId = await createAttachment({
       file_name: originalname,

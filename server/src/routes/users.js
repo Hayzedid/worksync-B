@@ -1,4 +1,4 @@
-// routes/userRoutes.js
+// routes/users.js
 import express from 'express';
 import {
   getCurrentUser,
@@ -13,8 +13,9 @@ import authenticateToken from '../middleware/auth.js';
 const router = express.Router();
 
 // Protected routes
-router.get('/me', authenticateToken, getCurrentUser);
-router.put('/me', authenticateToken, updateUserProfile);
+// Align with tests expecting /api/users/profile
+router.get('/profile', authenticateToken, getCurrentUser);
+router.put('/profile', authenticateToken, updateUserProfile);
 
 // Admin or public endpoints (adjust access as needed)
 router.get('/', authenticateToken, getAllUsersController);
