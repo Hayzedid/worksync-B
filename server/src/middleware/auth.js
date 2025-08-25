@@ -22,7 +22,7 @@ async function authenticateToken(req, res, next) {
     }
 
     const [users] = await pool.execute(
-      'SELECT id, email, first_name, last_name, is_active FROM users WHERE id = ?',
+      'SELECT id, email, first_name, last_name, is_active, role FROM users WHERE id = ?',
       [decoded.id]
     );
 
@@ -36,10 +36,11 @@ async function authenticateToken(req, res, next) {
     req.user = users[0];
     next();
   } catch (error) {
+    const { NODE_ENV } = await import('../config/config.js');
     return res.status(401).json({
       success: false,
       message: 'Invalid or expired token',
-      ...(process.env.NODE_ENV !== 'production' && { error: error.message })
+      ...(NODE_ENV !== 'production' && { error: error.message })
     });
   }
 }

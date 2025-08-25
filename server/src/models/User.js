@@ -6,6 +6,16 @@ export async function getUserById(userId) {
   return rows[0];
 }
 
+export async function getUserByEmail(email) {
+  const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
+  return rows[0] || null;
+}
+
+export async function updateUserPassword(userId, password_hash) {
+  const [result] = await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash, userId]);
+  return result.affectedRows > 0;
+}
+
 export const updateUser = async (id, username, profile_picture) => {
   const [result] = await pool.execute(
     'UPDATE users SET username = ?, profile_picture = ? WHERE id = ?',

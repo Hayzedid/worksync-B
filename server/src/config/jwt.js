@@ -1,9 +1,6 @@
 
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'test_secret_fallback';
+import { JWT_SECRET } from './config.js';
 
 export const generateToken = (user) => {
   const payload = {

@@ -5,7 +5,10 @@ import {
   getWorkspaceHandler,
   getMyWorkspacesHandler,
   addUserToWorkspaceHandler,
-  getWorkspaceMembersHandler
+  getWorkspaceMembersHandler,
+  updateWorkspaceHandler,
+  deleteWorkspaceHandler,
+  inviteByEmailHandler
 } from '../controllers/workspaceController.js';
 import authenticateToken from '../middleware/auth.js';
 
@@ -17,5 +20,8 @@ router.get('/', authenticateToken, getMyWorkspacesHandler);                // Ge
 router.get('/:id', authenticateToken, getWorkspaceHandler);                // Get by id
 router.post('/add-member', authenticateToken, addUserToWorkspaceHandler); // Add user
 router.get('/:id/members', authenticateToken, getWorkspaceMembersHandler);// Get members
+router.patch('/:id', authenticateToken, updateWorkspaceHandler);          // Update
+router.delete('/:id', authenticateToken, deleteWorkspaceHandler);         // Delete
+router.post('/invite', authenticateToken, inviteByEmailHandler);          // Invite by email -> { workspace_id, email }
 
 export default router;

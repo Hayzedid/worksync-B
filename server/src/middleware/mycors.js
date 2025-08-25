@@ -1,9 +1,19 @@
 import cors from 'cors';
+import { FRONTEND_URL } from '../config/config.js';
 
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: FRONTEND_URL, // Only allow your frontend
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 204,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Accept',
+    'X-Requested-With',
+    'X-Workspace-Id'
+  ],
+  // You can further restrict headers or add a whitelist function for more control
 };
 
 export default cors(corsOptions);

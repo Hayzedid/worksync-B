@@ -4,7 +4,12 @@ import { Server } from 'socket.io';
 import { testConnection } from './config/database.js';
 import socketHandler from './socket/socketHandler.js';
 
-const PORT = process.env.PORT || 5000;
+import * as config from './config/config.js';
+// Use a random port during tests to avoid EADDRINUSE
+let PORT = config.PORT;
+if (process.env.NODE_ENV === 'test') {
+  PORT = 0; // 0 lets the OS assign an available port
+}
 
 export let io; // Export io for use in controllers/services
 
@@ -23,7 +28,7 @@ async function startServer() {
     const server = http.createServer(app);
     io = new Server(server, {
       cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: config.FRONTEND_URL,
         methods: ['GET', 'POST'],
         credentials: true
       }
@@ -31,8 +36,12 @@ async function startServer() {
     
     socketHandler(io);
     
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌐 Accessible at: http://localhost:${PORT}`);
+    }).on('error', (err) => {
+      console.error('Failed to start server:', err);
+      process.exit(1);
     });
     
     console.log(`📊 Database connected and ready`);

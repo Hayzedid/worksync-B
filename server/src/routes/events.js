@@ -7,10 +7,11 @@ const router = express.Router()
 
 router.use(authenticateToken)
 
-router.post('/', authenticateToken, eventController.create)
-router.get('/', authenticateToken, eventController.getAll)
-router.get('/:id', authenticateToken, eventController.getById)
-router.put('/:id', authenticateToken, eventController.update)
-router.delete('/:id', authenticateToken, eventController.remove)
+router.post('/', eventController.validateEvent, eventController.validateRequest, eventController.create)
+router.get('/', eventController.getAll)
+router.get('/:id', eventController.getById)
+router.put('/:id', eventController.validateEvent, eventController.validateRequest, eventController.update)
+router.patch('/:id', eventController.update)
+router.delete('/:id', eventController.remove)
 
 export default router

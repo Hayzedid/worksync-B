@@ -9,6 +9,7 @@ import {
   getOnlineUsersController
 } from '../controllers/userController.js';
 import authenticateToken from '../middleware/auth.js';
+import { requireRole } from '../middleware/roles.js';
 
 const router = express.Router();
 
@@ -18,9 +19,9 @@ router.get('/profile', authenticateToken, getCurrentUser);
 router.put('/profile', authenticateToken, updateUserProfile);
 
 // Admin or public endpoints (adjust access as needed)
-router.get('/', authenticateToken, getAllUsersController);
-router.get('/online', authenticateToken, getOnlineUsersController);
-router.get('/:id', authenticateToken, getUserByIdController);
-router.delete('/:id', authenticateToken, deleteUserController);
+router.get('/', authenticateToken, requireRole('admin'), getAllUsersController);
+router.get('/online', authenticateToken, requireRole('admin'), getOnlineUsersController);
+router.get('/:id', authenticateToken, requireRole('admin'), getUserByIdController);
+router.delete('/:id', authenticateToken, requireRole('admin'), deleteUserController);
 
 export default router;

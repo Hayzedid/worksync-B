@@ -1,28 +1,28 @@
-const request = require('supertest');
-const app = require('../src/app.js');
+import request from 'supertest';
+import { server } from './setup.js';
 
 describe('Auth API', () => {
-  const email = 'testuser_auth@example.com';
+  const unique = Date.now();
+  const email = `testuser_auth_${unique}@example.com`;
   const password = 'password123';
   const userData = {
     email,
     password,
     firstName: 'Test',
     lastName: 'User',
-    userName: 'testuser_auth'
+    userName: `testuser_auth_${unique}`
   };
   let token;
 
   it('should register a new user', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/auth/register')
       .send(userData);
-    // Accept 201 (created) or 400 (already exists)
     expect([201, 400]).toContain(res.statusCode);
   });
 
   it('should login the user and return a token', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/auth/login')
       .send({ email, password });
     expect(res.statusCode).toBe(200);
@@ -31,7 +31,7 @@ describe('Auth API', () => {
   });
 
   it('should reject login with wrong password', async () => {
-    const res = await request(app)
+    const res = await request(server)
       .post('/api/auth/login')
       .send({ email, password: 'wrongpassword' });
     expect(res.statusCode).toBe(401);

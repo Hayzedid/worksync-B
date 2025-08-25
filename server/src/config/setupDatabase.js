@@ -1,20 +1,19 @@
 import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-dotenv.config();
+import * as config from './config.js';
 
 async function setupDatabase() {
   // Create a connection to the MySQL server without specifying a database
   const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || ''
+    host: config.DB_HOST,
+    port: config.DB_PORT,
+    user: config.DB_USER,
+    password: config.DB_PASSWORD
   });
 
   try {
     // Create the database if it doesn't exist
-    await connection.execute(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'worksync'}`);
-    console.log(`Database '${process.env.DB_NAME || 'worksync'}' created or already exists`);
+  await connection.execute(`CREATE DATABASE IF NOT EXISTS ${config.DB_NAME}`);
+  console.log(`Database '${config.DB_NAME}' created or already exists`);
     
     // Close the connection
     await connection.end();

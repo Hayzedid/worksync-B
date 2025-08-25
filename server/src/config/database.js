@@ -1,45 +1,19 @@
-   import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
-import dotenv from 'dotenv';
-dotenv.config();
 
-// Open SQLite database
-const dbPromise = open({
-  filename: process.env.DB_PATH || './worksync.db',
-  driver: sqlite3.Database
+import mysql from 'mysql2/promise';
+import * as config from './config.js';
+
+// Create MySQL connection pool
+const pool = mysql.createPool({
+    host: config.DB_HOST,
+    port: config.DB_PORT,
+    user: config.DB_USER,
+    password: config.DB_PASSWORD,
+    database: config.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    charset: 'utf8mb4'
 });
-
-// Create a pool-like interface for SQLite
-const pool = {
-  execute: async (sql, params = []) => {
-    const db = await dbPromise;
-    // Remove backticks and convert MySQL-specific syntax to SQLite
-    const sqliteSql = sql.replace(/`/g, '').replace(/\?/g, '?');
-    
-    if (sqliteSql.toUpperCase().startsWith('SELECT')) {
-      const rows = await db.all(sqliteSql, params);
-      return [rows];
-    } else if (sqliteSql.toUpperCase().startsWith('INSERT')) {
-      const result = await db.run(sqliteSql, params);
-      return [{ insertId: result.lastID, affectedRows: result.changes }];
-    } else {
-      const result = await db.run(sqliteSql, params);
-      return [{ affectedRows: result.changes }];
-    }
-  },
-  query: async (sql, params = []) => {
-    const db = await dbPromise;
-    // Remove backticks and convert MySQL-specific syntax to SQLite
-    const sqliteSql = sql.replace(/`/g, '').replace(/\?/g, '?');
-    const rows = await db.all(sqliteSql, params);
-    return [rows];
-  },
-  getConnection: async () => {
-    // For SQLite, we don't need connection management like MySQL
-    // Just return an object with a release method
-    return { release: () => {} };
-  }
-};
 
 async function testConnection() {
     try {

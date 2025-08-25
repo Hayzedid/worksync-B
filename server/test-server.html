@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Server</title>
+    <script>
+        async function testConnection() {
+            try {
+                const response = await fetch('http://localhost:4200');
+                const text = await response.text();
+                document.getElementById('status').textContent = `Success! Server responded: ${text}`;
+            } catch (error) {
+                document.getElementById('status').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Test connection when page loads
+        window.onload = testConnection;
+    </script>
+</head>
+<body>
+    <h1>Test Server Connection</h1>
+    <div id="status">Testing connection to server...</div>
+    <button onclick="testConnection()">Test Again</button>
+</body>
+</html>

@@ -1,3 +1,5 @@
+// Alias for compatibility with service imports
+export { deleteWorkspace as deleteWorkspaceById };
 // models/workspaceModel.js
 import { pool } from '../config/database.js';
 
@@ -46,4 +48,22 @@ export async function getWorkspaceMembers(workspace_id) {
     [workspace_id]
   );
   return rows;
+}
+
+// Update a workspace (only by creator)
+export async function updateWorkspace({ id, userId, name, description }) {
+  const [result] = await pool.execute(
+    'UPDATE workspaces SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND created_by = ?',
+    [name, description, id, userId]
+  );
+  return result.affectedRows;
+}
+
+// Delete a workspace (only by creator)
+export async function deleteWorkspace(id, userId) {
+  const [result] = await pool.execute(
+    'DELETE FROM workspaces WHERE id = ? AND created_by = ?',
+    [id, userId]
+  );
+  return result.affectedRows;
 }

@@ -1,6 +1,5 @@
 import { pool } from './database.js';
-import dotenv from 'dotenv';
-dotenv.config();
+import * as config from './config.js';
 
 async function initDatabase() {
   try {
@@ -14,6 +13,7 @@ async function initDatabase() {
         last_name VARCHAR(100),
         username VARCHAR(100) UNIQUE,
         profile_picture VARCHAR(255),
+        role ENUM('user', 'admin') DEFAULT 'user',
         email_verified BOOLEAN DEFAULT FALSE,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

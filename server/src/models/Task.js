@@ -3,9 +3,11 @@ import { pool } from '../config/database.js';
 
 // Get all tasks for a user
 export async function getAllTasksByUser(userId, limit = 20, offset = 0) {
+  const l = Math.max(0, parseInt(limit, 10) || 20);
+  const o = Math.max(0, parseInt(offset, 10) || 0);
   const [rows] = await pool.execute(
-    'SELECT SQL_CALC_FOUND_ROWS * FROM tasks WHERE created_by = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    [userId, Number(limit), Number(offset)]
+    `SELECT SQL_CALC_FOUND_ROWS * FROM tasks WHERE created_by = ? ORDER BY created_at DESC LIMIT ${l} OFFSET ${o}`,
+    [userId]
   );
   const [[{ 'FOUND_ROWS()': total }]] = await pool.query('SELECT FOUND_ROWS()');
   return { tasks: rows, total };
@@ -99,6 +101,8 @@ export async function deleteTask(taskId) {
 
 // Get all tasks assigned to a user, across all workspaces
 export async function getAllAssignedTasks(userId, limit = 20, offset = 0) {
+  const l = Math.max(0, parseInt(limit, 10) || 20);
+  const o = Math.max(0, parseInt(offset, 10) || 0);
   const [rows] = await pool.execute(
     `SELECT SQL_CALC_FOUND_ROWS tasks.*, workspaces.name AS workspace_name, projects.name AS project_name
      FROM tasks
@@ -106,8 +110,8 @@ export async function getAllAssignedTasks(userId, limit = 20, offset = 0) {
      LEFT JOIN projects ON tasks.project_id = projects.id
      WHERE tasks.assigned_to = ?
      ORDER BY tasks.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [userId, Number(limit), Number(offset)]
+     LIMIT ${l} OFFSET ${o}`,
+    [userId]
   );
   const [[{ 'FOUND_ROWS()': total }]] = await pool.query('SELECT FOUND_ROWS()');
   return { tasks: rows, total };
@@ -216,6 +220,14 @@ export async function getTasksKanbanView(projectId, userId) {
   return kanban;
 }
 
+export async function getTasksByProjectForUser(projectId, userId) {
+  const [rows] = await pool.execute(
+    'SELECT * FROM tasks WHERE project_id = ? AND created_by = ? ORDER BY created_at DESC',
+    [projectId, userId]
+  );
+  return rows;
+}
+
 export async function getTasksListView({ userId, projectId, status, startDate, endDate, limit = 20, offset = 0 }) {
   let sql = 'SELECT SQL_CALC_FOUND_ROWS * FROM tasks WHERE created_by = ?';
   const params = [userId];
@@ -231,8 +243,9 @@ export async function getTasksListView({ userId, projectId, status, startDate, e
     sql += ' AND due_date BETWEEN ? AND ?';
     params.push(startDate, endDate);
   }
-  sql += ' ORDER BY due_date ASC LIMIT ? OFFSET ?';
-  params.push(Number(limit), Number(offset));
+  const l = Math.max(0, parseInt(limit, 10) || 20);
+  const o = Math.max(0, parseInt(offset, 10) || 0);
+  sql += ` ORDER BY due_date ASC LIMIT ${l} OFFSET ${o}`;
   const [rows] = await pool.execute(sql, params);
   const [[{ 'FOUND_ROWS()': total }]] = await pool.query('SELECT FOUND_ROWS()');
   return { tasks: rows, total };

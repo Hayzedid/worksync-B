@@ -1,10 +1,38 @@
+// Delete a task by ID
+export async function deleteTaskById(req, res, next) {
+  try {
+    const { id } = req.params;
+    const affectedRows = await deleteTaskService(id);
+    if (!affectedRows) {
+      return res.status(404).json({ success: false, message: 'Task not found' });
+    }
+    return res.json({ success: true, message: 'Task deleted' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+}
+// Controller to get tasks by project for a user (for nested project routes)
+import { getTasksByProjectForUser } from '../models/Task.js';
+
+export async function getTasksByProject(req, res, next) {
+  try {
+    const projectId = req.params.projectId;
+    const userId = req.user.id;
+    const tasks = await getTasksByProjectForUser(projectId, userId);
+    res.json({ success: true, tasks });
+  } catch (error) {
+    next(error);
+  }
+}
 // controllers/taskController.js
 import {
-    getAllTasksByUser,
-    getTaskById,
-    createTask,
-    updateTask,
-    deleteTask,
+    getTasksService,
+    getSingleTaskService,
+    createTaskService,
+    updateTaskService,
+    deleteTaskService
+} from '../services/taskService.js';
+import {
     getAllAssignedTasks,
     assignTaskToUser,
     searchTasks,
@@ -26,8 +54,12 @@ import { sendEmail } from '../services/emailServices.js';
 
 export async function getTasks(req, res, next) {
   try {
-    const { limit = 20, offset = 0 } = req.query;
-    const { tasks, total } = await getAllTasksByUser(req.user.id, limit, offset);
+    const limitRaw = req.query.limit;
+    const offsetRaw = req.query.offset;
+    const limit = Number.isFinite(parseInt(limitRaw, 10)) ? parseInt(limitRaw, 10) : 20;
+    const offset = Number.isFinite(parseInt(offsetRaw, 10)) ? parseInt(offsetRaw, 10) : 0;
+    const userId = req.user.id;
+    const { tasks, total } = await getTasksService(userId, limit, offset);
     res.json({ success: true, tasks, total });
   } catch (error) {
     next(error);
@@ -35,16 +67,14 @@ export async function getTasks(req, res, next) {
 }
 
 export async function getSingleTask(req, res, next) {
-    try {
-        const task = await getTaskById(req.params.id);
-        if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
-
-        res.json({ success: true, task });
-    } catch (error) {
-         next(error);
-    }
+  try {
+    const task = await getSingleTaskService(req.params.id);
+    if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
+    res.json({ success: true, task });
+  } catch (error) {
+    next(error);
+  }
 }
-
 
 export async function createNewTask(req, res, next) {
   try {
@@ -52,93 +82,70 @@ export async function createNewTask(req, res, next) {
       title,
       description,
       due_date,
-      status = 'todo',
-      priority = 'medium',
-      assigned_to = null,
-      start_date = null,
-      completion_date = null,
-      estimated_hours = null,
-      actual_hours = null,
-      position = 0,
-    } = req.body;
-
-    if (!title) {
-      return res.status(400).json({ success: false, message: 'Title is required' });
-    }
-
-    // Optional project_id: from body or from route param if nested route (e.g., /projects/:projectId/tasks)
-    const project_id = req.body.project_id || req.params.projectId || null;
-
-    const created_by = req.user.id; // Assume user is authenticated and `req.user` is set
-
-    const taskId = await createTask({
-      title,
-      description,
-      due_date,
       status,
       priority,
       assigned_to,
-      created_by,
       project_id,
       start_date,
       completion_date,
       estimated_hours,
       actual_hours,
       position,
+      workspace_id
+    } = req.body;
+    const created_by = req.user.id;
+    let normalizedStatus = status ? String(status).toLowerCase().replace(/-/g, '_') : 'todo';
+    if (!['todo', 'in_progress', 'done'].includes(normalizedStatus)) {
+      normalizedStatus = 'todo';
+    }
+    const taskId = await createTaskService({
+      title,
+      description: description ?? null,
+      due_date: due_date ?? null,
+      status: normalizedStatus,
+      priority: priority ?? 'medium',
+      assigned_to: assigned_to ?? null,
+      created_by,
+      project_id,
+      start_date: start_date ?? null,
+      completion_date: completion_date ?? null,
+      estimated_hours: estimated_hours ?? null,
+      actual_hours: actual_hours ?? null,
+      position: position ?? 0,
+      workspace_id: workspace_id ?? null,
     });
-
-    res.status(201).json({ success: true, message: 'Task created', taskId });
+    return res.status(201).json({ success: true, message: 'Task created', taskId });
   } catch (error) {
-    next(error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 }
 
-
-
 export async function updateTaskById(req, res, next) {
-    try {
-        const { title, description, due_date, status } = req.body;
-        const taskId = req.params.id;
-
-        const affectedRows = await updateTask(taskId, { title, description, due_date, status });
-        if (affectedRows === 0) return res.status(404).json({ success: false, message: 'Task not found or unchanged' });
-
-        res.json({ success: true, message: 'Task updated' });
-    } catch (error) {
-         next(error);
+  try {
+    const { title, description, due_date, status } = req.body;
+    const incomingStatus = req.body.status;
+    const allowedStatuses = new Set(['todo', 'in_progress', 'done']);
+    let normalizedStatus = incomingStatus === undefined ? undefined : String(incomingStatus).toLowerCase().replace(/-/g, '_');
+    if (normalizedStatus !== undefined && !allowedStatuses.has(normalizedStatus)) {
+      normalizedStatus = 'todo';
     }
+    const taskId = req.params.id;
+    const affectedRows = await updateTaskService(taskId, { title, description, due_date, status: normalizedStatus });
+    if (!affectedRows) return res.status(404).json({ success: false, message: 'Task not found' });
+    return res.json({ success: true, message: 'Task updated' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
 }
-
-export async function deleteTaskById(req, res, next) {
-    try {
-        const taskId = req.params.id;
-        const affectedRows = await deleteTask(taskId);
-
-        if (affectedRows === 0) return res.status(404).json({ success: false, message: 'Task not found' });
-
-        res.json({ success: true, message: 'Task deleted' });
-    } catch (error) {
-         next(error);
-    }
-}
-export async function getTasksByProject(req, res, next) {
-    try {
-        const projectId = req.params.projectId;
-        const tasks = await getAllTasksByUser(req.user.id, projectId);
-        res.json({ success: true, tasks });
-    } catch (error) {
-        next(error);
-    }
-}
-
-
-
 
 // Fetch all tasks assigned to the logged-in user (auto-sync)
 export async function fetchAssignedTasks(req, res) {
   try {
     const userId = req.user.id;
-    const { limit = 20, offset = 0 } = req.query;
+    const limitRaw = req.query.limit;
+    const offsetRaw = req.query.offset;
+    const limit = Number.isFinite(parseInt(limitRaw, 10)) ? parseInt(limitRaw, 10) : 20;
+    const offset = Number.isFinite(parseInt(offsetRaw, 10)) ? parseInt(offsetRaw, 10) : 0;
     const { tasks, total } = await getAllAssignedTasks(userId, limit, offset);
     res.status(200).json({ success: true, tasks, total });
   } catch (error) {
