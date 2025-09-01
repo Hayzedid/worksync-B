@@ -1,5 +1,3 @@
-// Alias for compatibility with service imports
-export { deleteWorkspace as deleteWorkspaceById };
 // models/workspaceModel.js
 import { pool } from '../config/database.js';
 
@@ -67,3 +65,6 @@ export async function deleteWorkspace(id, userId) {
   );
   return result.affectedRows;
 }
+
+// Alias for compatibility with service imports
+export { deleteWorkspace as deleteWorkspaceById };
