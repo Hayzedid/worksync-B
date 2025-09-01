@@ -1,9 +1,16 @@
-import { getUserNotifications, markNotificationRead } from '../models/Notification.js';
+import { getUserNotifications, markNotificationRead, getUnreadCount } from '../models/Notification.js';
 
 export async function getNotifications(req, res, next) {
   try {
-    const notifications = await getUserNotifications(req.user.id);
-    res.json({ success: true, notifications });
+    const { workspace_id } = req.query;
+    const notifications = await getUserNotifications(req.user.id, workspace_id);
+    const unreadCount = await getUnreadCount(req.user.id);
+    
+    res.json({ 
+      success: true, 
+      notifications,
+      unreadCount
+    });
   } catch (error) {
     next(error);
   }

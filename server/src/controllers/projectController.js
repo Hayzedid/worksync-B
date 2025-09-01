@@ -1,11 +1,17 @@
-// controllers/projectController.js
-import {
-  getProjectsService,
-  getProjectService,
-  createProjectService,
-  updateProjectService,
-  deleteProjectService
-} from '../services/projectService.js';
+// Update project by ID
+import { getProjectsService } from '../services/projectService.js';
+export const updateProject = async (req, res, next) => {
+  try {
+    const updateData = {
+      id: req.params.id,
+      userId: req.user.id,
+      ...req.body
+    };
+    // ...existing update logic here...
+  } catch (err) {
+    next(err);
+  }
+};
 import { getTasksByProjectForUser } from '../models/Task.js';
 import { getNotesByProject } from '../models/Note.js';
 
@@ -72,26 +78,46 @@ export const getProject = async (req, res, next) => {
 
 export const createProject = async (req, res, next) => {
   try {
-    const projectId = await createProjectService({ ...req.body, owner_id: req.user.id });
-  return res.status(201).json({ success: true, message: 'Project created', projectId });
+    // Ensure all required fields are present and set to null if undefined
+    const { name, description, status, workspace_id } = req.body;
+    const projectData = {
+      userId: req.user.id,
+      name: name ?? null,
+      description: description ?? '',
+      status: status ?? 'active',
+      workspace_id: workspace_id ?? null
+    };
+    console.log('Creating project with data:', projectData);
+    const projectId = await createProjectService(projectData);
+    return res.status(201).json({ success: true, message: 'Project created', projectId });
   } catch (err) {
-  return res.status(500).json({ success: false, message: err.message || 'Server error' });
-  }
-};
-
-export const updateProject = async (req, res, next) => {
-  try {
-    const affectedRows = await updateProjectService(req.params.id, req.body);
-    if (!affectedRows) return res.status(404).json({ success: false, message: 'Project not found' });
-  return res.json({ success: true, message: 'Project updated' });
-  } catch (err) {
-  return res.status(500).json({ success: false, message: err.message || 'Server error' });
+    console.error('Error creating project:', err);
+    return res.status(500).json({ success: false, message: err.message || 'Server error' });
   }
 };
 
 export const deleteProject = async (req, res, next) => {
+  console.log('[deleteProject] ENTRY req.params:', req.params, 'req.user:', req.user);
   try {
-    const affectedRows = await deleteProjectService(req.params.id);
+    // Enhanced debug logging for raw values
+    const projectIdRaw = req.params.id;
+    const userIdRaw = req.user && req.user.id;
+  console.log('[deleteProject] Raw params:', { projectIdRaw, userIdRaw });
+
+    // Parse and validate
+    const projectId = projectIdRaw !== undefined ? Number(projectIdRaw) : null;
+    const userId = userIdRaw !== undefined ? Number(userIdRaw) : null;
+  console.log('[deleteProject] Parsed params:', { projectId, userId, typeofProjectId: typeof projectId, typeofUserId: typeof userId });
+
+    if (
+      projectId === null || isNaN(projectId) ||
+      userId === null || isNaN(userId)
+    ) {
+      console.error('[deleteProject] Invalid projectId or userId', { projectId, userId });
+      return res.status(400).json({ success: false, message: 'Invalid project or user ID' });
+    }
+    console.log('[deleteProject] Deleting project with:', { projectId, userId });
+    const affectedRows = await deleteProjectService(projectId, userId);
     if (!affectedRows) return res.status(404).json({ success: false, message: 'Project not found' });
     res.json({ success: true, message: 'Project deleted' });
   } catch (err) {
@@ -113,6 +139,74 @@ export async function searchProjectsController(req, res, next) {
     const userId = req.user.id;
     const projects = await searchProjects({ userId, q, status, workspaceId: Number.isFinite(workspaceId) ? workspaceId : undefined });
     res.json({ success: true, projects });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Get tasks for a specific project
+export async function getProjectTasks(req, res, next) {
+  try {
+    const { id } = req.params;
+    const tasks = await getTasksByProjectForUser(id, req.user.id);
+    res.json({ success: true, tasks });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Create task in a specific project
+export async function createProjectTask(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { title, status = 'todo' } = req.body;
+    
+    // Import the task service/model
+    const { createTaskService } = await import('../services/taskService.js');
+    
+    const taskData = {
+      title,
+      status,
+      project_id: parseInt(id),
+      created_by: req.user.id
+    };
+    
+    const taskId = await createTaskService(taskData);
+    res.status(201).json({ success: true, taskId, message: 'Task created in project' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Get notes for a specific project
+export async function getProjectNotes(req, res, next) {
+  try {
+    const { id } = req.params;
+    const notes = await getNotesByProject(id, req.user.id);
+    res.json({ success: true, notes });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Create note in a specific project
+export async function createProjectNote(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { title, content } = req.body;
+    
+    // Import the note service/model
+    const { createNoteService } = await import('../services/noteService.js');
+    
+    const noteData = {
+      title,
+      content,
+      project_id: parseInt(id),
+      created_by: req.user.id
+    };
+    
+    const noteId = await createNoteService(noteData);
+    res.status(201).json({ success: true, noteId, message: 'Note created in project' });
   } catch (error) {
     next(error);
   }

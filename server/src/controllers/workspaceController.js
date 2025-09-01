@@ -1,4 +1,5 @@
 // controllers/workspaceController.js
+import { pool } from '../config/database.js';
 import {
   createWorkspaceService,
   getWorkspacesService,
@@ -92,6 +93,39 @@ export async function getWorkspaceMembersHandler(req, res) {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch members' });
+  }
+}
+
+// Remove member from workspace
+export async function removeWorkspaceMemberHandler(req, res) {
+  const { id: workspaceId, userId } = req.params;
+  const requesterId = req.user.id;
+
+  try {
+    // Check if requester is workspace owner
+    const workspace = await getWorkspaceService(workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+    
+    if (workspace.created_by !== requesterId) {
+      return res.status(403).json({ error: 'Only workspace owner can remove members' });
+    }
+
+    // Remove the member
+    const [result] = await pool.execute(
+      'DELETE FROM workspace_members WHERE workspace_id = ? AND user_id = ?',
+      [workspaceId, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Member not found in workspace' });
+    }
+
+    res.status(200).json({ message: 'Member removed successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to remove member' });
   }
 }
 

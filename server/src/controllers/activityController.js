@@ -1,3 +1,14 @@
+// GET /api/activities - Return all activities
+import { pool } from '../config/database.js';
+
+export const getAllActivities = async (req, res, next) => {
+  try {
+    const [activities] = await pool.execute('SELECT * FROM activities ORDER BY created_at DESC');
+    res.json({ success: true, activities });
+  } catch (err) {
+    next(err);
+  }
+};
 import { getWorkspaceActivity, logActivity } from '../models/ActivityLog.js';
 import { getWorkspaceMembers } from '../models/Workspace.js';
 

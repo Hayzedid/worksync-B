@@ -170,8 +170,8 @@ export const loginUser = async (req, res, next) => {
     const { NODE_ENV } = await import('../config/config.js');
     res.cookie('token', token, {
       httpOnly: true,
-      secure: NODE_ENV === 'production',
-      sameSite: 'none',
+      secure: NODE_ENV === 'production' ? true : false,
+      sameSite: NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
     console.log('Set cookie for token');
@@ -200,8 +200,8 @@ export const logoutUser = async (req, res, next) => {
     const { NODE_ENV } = await import('../config/config.js');
     res.clearCookie('token', {
       httpOnly: true,
-      secure: NODE_ENV === 'production',
-      sameSite: 'none'
+      secure: NODE_ENV === 'production' ? true : false,
+      sameSite: NODE_ENV === 'production' ? 'none' : 'lax'
     });
     
     res.status(200).json({ success: true, message: 'Logout successful' });

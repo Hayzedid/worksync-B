@@ -98,7 +98,8 @@ export async function createNewTask(req, res, next) {
     if (!['todo', 'in_progress', 'done'].includes(normalizedStatus)) {
       normalizedStatus = 'todo';
     }
-    const taskId = await createTaskService({
+    
+    const taskData = {
       title,
       description: description ?? null,
       due_date: due_date ?? null,
@@ -106,14 +107,16 @@ export async function createNewTask(req, res, next) {
       priority: priority ?? 'medium',
       assigned_to: assigned_to ?? null,
       created_by,
-      project_id,
+      project_id: project_id ?? null,
       start_date: start_date ?? null,
       completion_date: completion_date ?? null,
       estimated_hours: estimated_hours ?? null,
       actual_hours: actual_hours ?? null,
       position: position ?? 0,
       workspace_id: workspace_id ?? null,
-    });
+    };
+    
+    const taskId = await createTaskService(taskData);
     return res.status(201).json({ success: true, message: 'Task created', taskId });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message || 'Server error' });
