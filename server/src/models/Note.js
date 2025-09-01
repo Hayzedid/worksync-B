@@ -1,3 +1,6 @@
+import { pool } from '../config/database.js';
+import * as config from '../config/config.js';
+
 // Delete a note by ID (admin/service use, no user check)
 export async function deleteNoteById(noteId) {
   const [result] = await pool.execute(
@@ -6,8 +9,6 @@ export async function deleteNoteById(noteId) {
   );
   return result.affectedRows;
 }
-import { pool } from '../config/database.js';
-import * as config from '../config/config.js';
 
 
 export async function createNote({
@@ -30,7 +31,7 @@ export async function getNotes({ userId, limit = 20, offset = 0 }) {
   const off = Number.isFinite(Number(offset)) ? Math.max(0, Number(offset)) : 0;
   if (config.NODE_ENV !== 'production') {
     // Lightweight debug of bindings
-    // eslint-disable-next-line no-console
+     
     console.debug('[getNotes] params', { userId, limit: lim, offset: off });
   }
   // Inline LIMIT/OFFSET to avoid MySQL binding issues (values are validated integers)
@@ -67,7 +68,7 @@ export async function getAllNotesForUser(userId, limit = 20, offset = 0) {
   const lim = Number.isFinite(Number(limit)) ? Math.max(0, Number(limit)) : 20;
   const off = Number.isFinite(Number(offset)) ? Math.max(0, Number(offset)) : 0;
   if (config.NODE_ENV !== 'production') {
-    // eslint-disable-next-line no-console
+     
     console.debug('[getAllNotesForUser] params', { userId, limit: lim, offset: off });
   }
   const [rows] = await pool.query(

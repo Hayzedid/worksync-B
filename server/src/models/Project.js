@@ -46,9 +46,18 @@ export const updateProjectById = async ({ id, userId, name, description, status,
 };
 
 export const deleteProjectById = async (id, userId) => {
+  // Enhanced debug logging
+  console.log('[deleteProjectById] Params:', { projectId: id, userId, typeofProjectId: typeof id, typeofUserId: typeof userId });
+
+  // Final fallback: forcibly convert undefined/NaN to null
+  const safeId = (id === undefined || isNaN(id)) ? null : id;
+  const safeUserId = (userId === undefined || isNaN(userId)) ? null : userId;
+  console.log('[deleteProjectById] Final SQL params:', [safeId, safeUserId]);
+  console.log('[deleteProjectById] About to execute SQL DELETE with:', [safeId, safeUserId]);
+
   const [result] = await pool.execute(
     'DELETE FROM projects WHERE id = ? AND owner_id = ?',
-    [id, userId]
+    [safeId, safeUserId]
   );
   return result.affectedRows;
 };

@@ -96,7 +96,7 @@ export async function getRecurringEvents() {
 export async function createEventInstance(event) {
   // Example: create a new event based on the recurring event
   await pool.execute(
-    'INSERT INTO events (title, description, start_time, end_time, created_by, recurrence) VALUES (?, ?, ?, ?, ?, ?)',
-    [event.title, event.description, event.start_time, event.end_time, event.created_by, event.recurrence]
+    'INSERT INTO events (title, description, start_date, end_date, owner_id, recurrence) VALUES (?, ?, ?, ?, ?, ?)',
+    [event.title, event.description, event.start_date, event.end_date, event.owner_id, event.recurrence]
   );
 }

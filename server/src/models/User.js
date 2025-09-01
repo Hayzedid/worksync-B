@@ -16,11 +16,32 @@ export async function updateUserPassword(userId, password_hash) {
   return result.affectedRows > 0;
 }
 
-export const updateUser = async (id, username, profile_picture) => {
-  const [result] = await pool.execute(
-    'UPDATE users SET username = ?, profile_picture = ? WHERE id = ?',
-    [username, profile_picture, id]
-  );
+export const updateUser = async (id, username, profile_picture, email) => {
+  let query = 'UPDATE users SET';
+  let params = [];
+  let fields = [];
+  
+  if (username) {
+    fields.push(' username = ?');
+    params.push(username);
+  }
+  if (profile_picture) {
+    fields.push(' profile_picture = ?');
+    params.push(profile_picture);
+  }
+  if (email) {
+    fields.push(' email = ?');
+    params.push(email.toLowerCase());
+  }
+  
+  if (fields.length === 0) {
+    return false; // No fields to update
+  }
+  
+  query += fields.join(',') + ' WHERE id = ?';
+  params.push(id);
+  
+  const [result] = await pool.execute(query, params);
   return result.affectedRows > 0;
 };
 
