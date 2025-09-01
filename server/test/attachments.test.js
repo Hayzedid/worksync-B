@@ -4,6 +4,7 @@ import { server, getToken } from './setup.js';
 describe('Attachments API', () => {
   let token;
   let attachmentId;
+  let testTaskId;
 
   beforeAll(async () => {
     // Register and login a test user
@@ -18,20 +19,36 @@ describe('Attachments API', () => {
     });
     const res = await request(server).post('/api/auth/login').send({ email, password });
     token = res.body.token;
+
+    // Create a test task for attachments
+    const taskRes = await request(server)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Test Task for Attachments',
+        description: 'A task for testing attachments',
+        priority: 'medium',
+        status: 'todo'
+      });
+    if (taskRes.statusCode === 201) {
+      testTaskId = taskRes.body.taskId;
+    }
   });
 
   it('should upload an attachment', async () => {
     const res = await request(server)
-      .post('/api/attachments')
+      .post(`/api/attachments/tasks/${testTaskId}`)
       .set('Authorization', `Bearer ${token}`)
       .attach('file', Buffer.from('test file'), 'test.txt');
   expect([201, 400]).toContain(res.statusCode);
-    attachmentId = res.body.attachmentId;
+    if (res.statusCode === 201) {
+      attachmentId = res.body.attachmentId;
+    }
   });
 
   it('should get attachments for a task', async () => {
     const res = await request(server)
-      .get(`/api/attachments/task/${1}`)
+      .get(`/api/attachments/task/${testTaskId}`)
       .set('Authorization', `Bearer ${token}`);
   expect([200, 404]).toContain(res.statusCode);
   });
