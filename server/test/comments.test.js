@@ -20,6 +20,32 @@ describe('Comments API', () => {
     });
     const res = await request(server).post('/api/auth/login').send({ email, password });
     token = res.body.token;
+
+    // Create a test task
+    const taskRes = await request(server)
+      .post('/api/tasks')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Test Task for Comments',
+        description: 'A task for testing comments',
+        priority: 'medium',
+        status: 'todo'
+      });
+    if (taskRes.statusCode === 201) {
+      testTaskId = taskRes.body.taskId;
+    }
+
+    // Create a test note
+    const noteRes = await request(server)
+      .post('/api/notes')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Test Note for Comments',
+        content: 'A note for testing comments'
+      });
+    if (noteRes.statusCode === 201) {
+      testNoteId = noteRes.body.noteId;
+    }
   });
 
   it('should add a comment to a task', async () => {
