@@ -18,6 +18,9 @@ const router = express.Router();
 router.get('/profile', authenticateToken, getCurrentUser);
 router.put('/profile', authenticateToken, updateUserProfile);
 
+// Frontend compatibility aliases
+router.put('/me', authenticateToken, updateUserProfile); // Frontend expects /me endpoint
+
 // Admin or public endpoints (adjust access as needed)
 router.get('/', authenticateToken, requireRole('admin'), getAllUsersController);
 router.get('/online', authenticateToken, requireRole('admin'), getOnlineUsersController);

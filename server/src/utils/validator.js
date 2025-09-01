@@ -1,3 +1,6 @@
+// src/utils/validator.js
+import { body } from 'express-validator';
+
 // Comment validation
 export const validateComment = [
   body('content').notEmpty().withMessage('Comment content is required'),
@@ -27,8 +30,6 @@ export const validateNote = [
   body('content').optional().isString(),
   body('project_id').optional().isInt(),
 ];
-// src/utils/validator.js
-import { body } from 'express-validator';
 
 export const validateRegister = [
   body('email').isEmail().withMessage('Invalid email'),
