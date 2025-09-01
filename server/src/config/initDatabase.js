@@ -13,7 +13,7 @@ async function initDatabase() {
         last_name VARCHAR(100),
         username VARCHAR(100) UNIQUE,
         profile_picture VARCHAR(255),
-        role ENUM('user', 'admin') DEFAULT 'user',
+        timezone VARCHAR(50) DEFAULT 'UTC',
         email_verified BOOLEAN DEFAULT FALSE,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -40,6 +40,8 @@ async function initDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         workspace_id INT NOT NULL,
         user_id INT NOT NULL,
+        role ENUM('member', 'admin', 'owner') DEFAULT 'member',
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -105,10 +107,12 @@ async function initDatabase() {
         message TEXT NOT NULL,
         related_id INT NULL,
         related_type VARCHAR(50) NULL,
+        related_workspace_id INT NULL,
         is_read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (related_workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
       )
     `);
 

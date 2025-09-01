@@ -3,6 +3,7 @@ import http from 'http';
 import { Server } from 'socket.io';
 import { testConnection } from './config/database.js';
 import socketHandler from './socket/socketHandler.js';
+import YjsWebSocketServer from './socket/yjsServer.js';
 
 import * as config from './config/config.js';
 // Use a random port during tests to avoid EADDRINUSE
@@ -36,9 +37,21 @@ async function startServer() {
     
     socketHandler(io);
     
+    // Start Y.js WebSocket server for collaborative editing (disabled in test mode)
+    if (process.env.NODE_ENV !== 'test') {
+      const yjsPort = process.env.YJS_WEBSOCKET_PORT || 1234;
+      const yjsServer = new YjsWebSocketServer(yjsPort);
+      yjsServer.start();
+      yjsServer.startCleanupJob();
+    }
+    
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌐 Accessible at: http://localhost:${PORT}`);
+      if (process.env.NODE_ENV !== 'test') {
+        const yjsPort = process.env.YJS_WEBSOCKET_PORT || 1234;
+        console.log(`🔗 Y.js WebSocket server running on ws://localhost:${yjsPort}`);
+      }
     }).on('error', (err) => {
       console.error('Failed to start server:', err);
       process.exit(1);
