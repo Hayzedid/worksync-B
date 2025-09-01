@@ -37,6 +37,9 @@ import notificationRoutes from './routes/notifications.js';
 import activityRoutes from './routes/activity.js';
 import calendarRoutes from './routes/calendar.js';
 import attachmentRoutes from './routes/attachments.js';
+// Phase 2 Collaboration Routes
+import presenceRoutes from './routes/presence.js';
+import collaborationRoutes from './routes/collaboration.js';
 import cookieParser from 'cookie-parser';
 import authenticateToken from './middleware/auth.js';
 import helmet from 'helmet';
@@ -96,6 +99,9 @@ if (minimalRoutes) {
   app.use('/api/activity', authenticateToken, activityRoutes);
   app.use('/api/calendar', authenticateToken, calendarRoutes);
   app.use('/api/attachments', authenticateToken, attachmentRoutes);
+  // Phase 2 Collaboration Routes
+  app.use('/api/presence', authenticateToken, presenceRoutes);
+  app.use('/api/collaboration', authenticateToken, collaborationRoutes);
 }
 
 
