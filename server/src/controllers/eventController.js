@@ -198,22 +198,13 @@ export const update = async (req, res) => {
 //   try {
 //     console.log('updateEvent params:', { title, start_date, end_date, owner_id, id });
 
-//     const event = await Event.updateEvent(id, title, start_date, end_date)
 
-//     res.json({ success: true, message: 'Event updated successfully', event })
-//   } catch (err) {
-//      next(err);
-//      console.log('Error updating event:', err);
-//     res.status(500).json({ success: false, message: 'Server error', error: err.message })
-//   }
-// }
 
 export const remove = async (req, res, next) => {
   try {
     await Event.deleteEvent(req.params.id)
     res.json({ success: true, message: 'Event deleted successfully' })
   } catch (err) {
-     next(err);
-    res.status(500).json({ success: false, message: 'Server error', error: err.message })
+    next(err);
   }
 }
