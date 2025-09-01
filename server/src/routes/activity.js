@@ -1,9 +1,12 @@
 import express from 'express';
-import { getActivityFeed } from '../controllers/activityController.js';
+import { getActivityFeed, getAllActivities } from '../controllers/activityController.js';
 import authenticateToken from '../middleware/auth.js';
 
 const router = express.Router();
 router.use(authenticateToken);
+
+// GET /api/activities - Return all activities
+router.get('/', getAllActivities);
 
 // Align with test expecting /api/activity
 router.get('/activity', (req, res, next) => {
@@ -15,4 +18,4 @@ router.get('/activity', (req, res, next) => {
 // Original route
 router.get('/workspaces/:id/activity', getActivityFeed);
 
-export default router; 
+export default router;

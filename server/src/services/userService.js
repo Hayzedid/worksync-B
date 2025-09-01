@@ -12,8 +12,8 @@ export async function getUserService(userId) {
   return getUserById(userId);
 }
 
-export async function updateUserService(id, username, profile_picture) {
-  return updateUser(id, username, profile_picture);
+export async function updateUserService(id, username, profile_picture, email) {
+  return updateUser(id, username, profile_picture, email);
 }
 
 export async function getAllUsersService() {

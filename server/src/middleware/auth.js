@@ -2,16 +2,23 @@ import { verifyToken } from '../config/jwt.js';
 import { pool } from '../config/database.js';
 
 async function authenticateToken(req, res, next) {
+  // Debug: Log cookies and headers for troubleshooting
+  console.log('Auth middleware: cookies:', req.cookies);
+  console.log('Auth middleware: headers:', req.headers);
   try {
+    let token;
     const authHeader = req.headers['authorization'];
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+      token = req.cookies.token;
+    }
+    if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Authorization header missing or malformed'
+        message: 'Authorization header or token cookie missing or malformed'
       });
     }
-
-    const token = authHeader.split(' ')[1];
     const decoded = verifyToken(token);
 
     if (!decoded?.id) {
@@ -22,7 +29,7 @@ async function authenticateToken(req, res, next) {
     }
 
     const [users] = await pool.execute(
-      'SELECT id, email, first_name, last_name, is_active, role FROM users WHERE id = ?',
+      'SELECT id, email, first_name, last_name, is_active FROM users WHERE id = ?',
       [decoded.id]
     );
 

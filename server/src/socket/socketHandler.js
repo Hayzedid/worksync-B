@@ -1,89 +1,27 @@
-    // Custom real-time automations (trigger and broadcast results)
-    // { roomId, automation, result }
-    socket.on('automationTriggered', ({ roomId, automation, result }) => {
-      io.to(roomId).emit('automationResult', { automation, result });
-    });
-    // Real-time board/calendar updates
-    // { boardId, update }
-    socket.on('boardUpdate', ({ boardId, update }) => {
-      io.to(boardId).emit('boardUpdate', { update });
-    });
 
-    // { calendarId, update }
-    socket.on('calendarUpdate', ({ calendarId, update }) => {
-      io.to(calendarId).emit('calendarUpdate', { update });
-    });
-    // Real-time file attachment notifications
-    // { roomId, file, action: 'added' | 'removed' }
-    socket.on('fileAttachment', ({ roomId, file, action }) => {
-      io.to(roomId).emit('fileAttachment', { file, action });
-    });
-    // Collaborative task assignment updates
-    // { roomId, assignees }
-    socket.on('updateAssignees', ({ roomId, assignees }) => {
-      io.to(roomId).emit('updateAssignees', { assignees });
-    });
-    // Live notifications (popups for mentions, assignments, status changes, reminders)
-    // { targetUserId, notification }
-    socket.on('liveNotification', ({ targetUserId, notification }) => {
-      const targetSocketId = onlineUsers.get(targetUserId);
-      if (targetSocketId) {
-        io.to(targetSocketId).emit('liveNotification', { notification });
-      }
-    });
-
-    // Notification read/unread status sync
-    // { notificationId, read }
-    socket.on('notificationRead', ({ notificationId, read }) => {
-      // Broadcast to all devices of the user (if multi-device)
-      io.emit('notificationRead', { userId, notificationId, read });
-    });
-    // Undo/Redo actions in real time
-    // { roomId, action: 'undo' | 'redo', state }
-    socket.on('undoRedo', ({ roomId, action, state }) => {
-      io.to(roomId).emit('undoRedo', { userId, action, state });
-    });
-
-    // Version history updates
-    // { roomId, version }
-    socket.on('versionUpdate', ({ roomId, version }) => {
-      io.to(roomId).emit('versionUpdate', { version });
-    });
-    // Optimistic UI: acknowledge edit immediately
-    // { roomId, changes, editId }
-    socket.on('editResource', ({ roomId, changes, editId }) => {
-      // Acknowledge to sender for optimistic UI
-      socket.emit('editAck', { editId, status: 'received' });
-      // Broadcast to others in the room
-      socket.to(roomId).emit('resourceUpdated', {
-        userId,
-        changes,
-        editId
-      });
-    });
-
-    // Conflict resolution: notify of conflicts
-    // { roomId, conflict: { editId, serverState, clientState } }
-    socket.on('editConflict', ({ roomId, conflict }) => {
-      io.to(roomId).emit('editConflict', { conflict });
-    });
-    // Real-time comments and chat in a room
-    // { roomId, comment: { id, text, author, timestamp } }
-    socket.on('newComment', ({ roomId, comment }) => {
-      io.to(roomId).emit('newComment', { comment });
-    });
-
-    // Real-time chat message in a room
-    // { roomId, message: { id, text, author, timestamp } }
-    socket.on('chatMessage', ({ roomId, message }) => {
-      io.to(roomId).emit('chatMessage', { message });
-    });
-
+// Phase 2 Enhanced Socket.IO Handler for Advanced Collaboration
 import jwt from 'jsonwebtoken';
-const onlineUsers = new Map(); // userId -> socket.id
+import { pool } from '../config/database.js';
+
+const onlineUsers = new Map(); // userId -> { socketId, userInfo, workspaceId, currentPage }
+const collaborativeSessions = new Map(); // roomId -> Set<userId>
 
 export function getOnlineUsers() {
   return Array.from(onlineUsers.keys());
+}
+
+export function getWorkspacePresence(workspaceId) {
+  const users = [];
+  onlineUsers.forEach((userInfo, userId) => {
+    if (userInfo.workspaceId === workspaceId) {
+      users.push({
+        userId,
+        currentPage: userInfo.currentPage,
+        lastActivity: userInfo.lastActivity
+      });
+    }
+  });
+  return users;
 }
 
 export default function socketHandler(io) {
@@ -102,72 +40,507 @@ export default function socketHandler(io) {
     }
   });
 
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     const userId = socket.user?.id;
-    if (userId) {
-      onlineUsers.set(userId, socket.id);
-      io.emit('userOnline', userId);
+    if (!userId) return;
+
+    console.log(`🔗 User ${userId} connected`);
+
+    // Update user online status in database
+    try {
+  await pool.execute(
+        'UPDATE users SET is_online = true, last_seen = NOW() WHERE id = ?',
+        [userId]
+      );
+    } catch (error) {
+      console.error('Failed to update user online status:', error);
     }
 
+    // ===========================================
+    // PHASE 2: USER PRESENCE EVENTS
+    // ===========================================
 
-    // Join a room for a specific resource (task, note, event)
-    socket.on('joinRoom', (roomId) => {
-      socket.join(roomId);
-      io.to(roomId).emit('userJoinedRoom', { userId, roomId });
-    });
+    // User joins a page/workspace
+    socket.on('user:join', async ({ workspaceId, currentPage }) => {
+      try {
+        // Update online users map
+        onlineUsers.set(userId, {
+          socketId: socket.id,
+          workspaceId,
+          currentPage,
+          lastActivity: new Date()
+        });
 
-    // Broadcast changes to others in the room (live editing)
-    socket.on('editResource', ({ roomId, changes }) => {
-      socket.to(roomId).emit('resourceUpdated', {
-        userId,
-        changes,
-      });
-    });
+        // Update database presence
+        await database.execute(`
+          INSERT INTO user_presence (user_id, workspace_id, current_page, last_activity, is_online)
+          VALUES (?, ?, ?, NOW(), true)
+          ON DUPLICATE KEY UPDATE
+          workspace_id = VALUES(workspace_id),
+          current_page = VALUES(current_page),
+          last_activity = VALUES(last_activity),
+          is_online = VALUES(is_online)
+        `, [userId, workspaceId, currentPage]);
 
-    // Live cursor and selection sharing
-    // { roomId, cursor: { position: {line, ch}, selection: {start, end} }, userInfo: { id, name, avatar } }
-    socket.on('cursorUpdate', ({ roomId, cursor, selection, userInfo }) => {
-      socket.to(roomId).emit('cursorUpdate', {
-        userId,
-        cursor,
-        selection,
-        userInfo
-      });
-    });
+        // Join workspace room
+        socket.join(`workspace:${workspaceId}`);
+        
+        // Broadcast presence update to workspace
+        socket.to(`workspace:${workspaceId}`).emit('presence:update', {
+          userId,
+          action: 'join',
+          currentPage,
+          timestamp: new Date()
+        });
 
-    // Send notification to a user
-    socket.on('notifyUser', ({ targetUserId, notification }) => {
-      const targetSocketId = onlineUsers.get(targetUserId);
-      if (targetSocketId) {
-        io.to(targetSocketId).emit('notification', { notification });
+        console.log(`👤 User ${userId} joined workspace ${workspaceId} on page ${currentPage}`);
+      } catch (error) {
+        console.error('user:join error:', error);
       }
     });
 
+    // User leaves a page/workspace
+    socket.on('user:leave', async ({ workspaceId }) => {
+      try {
+        // Remove from online users
+        onlineUsers.delete(userId);
 
-    // Typing indicator (start/stop typing)
-    socket.on('typing', ({ roomId, isTyping }) => {
-      socket.to(roomId).emit('userTyping', { userId, isTyping });
+        // Update database
+        await database.execute(
+          'UPDATE user_presence SET is_online = false, last_activity = NOW() WHERE user_id = ?',
+          [userId]
+        );
+
+        // Leave workspace room
+        socket.leave(`workspace:${workspaceId}`);
+
+        // Broadcast presence update
+        socket.to(`workspace:${workspaceId}`).emit('presence:update', {
+          userId,
+          action: 'leave',
+          timestamp: new Date()
+        });
+
+        console.log(`👤 User ${userId} left workspace ${workspaceId}`);
+      } catch (error) {
+        console.error('user:leave error:', error);
+      }
     });
 
-    // Presence: broadcast when a user is viewing or editing a resource
-    socket.on('activity', ({ roomId, activity }) => {
-      // activity: 'viewing' | 'editing' | 'idle' | ...
-      socket.to(roomId).emit('userActivity', { userId, activity });
+    // User activity tracking
+    socket.on('user:activity', async ({ workspaceId, activity, metadata }) => {
+      try {
+        const userInfo = onlineUsers.get(userId);
+        if (userInfo) {
+          userInfo.lastActivity = new Date();
+          
+          // Update database
+          await database.execute(
+            'UPDATE user_presence SET last_activity = NOW(), session_data = ? WHERE user_id = ?',
+            [JSON.stringify({ activity, metadata }), userId]
+          );
+
+          // Broadcast activity to workspace
+          socket.to(`workspace:${workspaceId}`).emit('presence:update', {
+            userId,
+            action: 'activity',
+            activity,
+            metadata,
+            timestamp: new Date()
+          });
+        }
+      } catch (error) {
+        console.error('user:activity error:', error);
+      }
     });
 
-    // On joinRoom, broadcast presence
+    // ===========================================
+    // PHASE 2: UNIVERSAL COMMENTS EVENTS
+    // ===========================================
+
+    // Create new comment
+    socket.on('comment:create', async ({ itemType, itemId, content, parentId = null }) => {
+      try {
+        const [result] = await database.execute(`
+          INSERT INTO comments (content, commentable_type, commentable_id, created_by, parent_id)
+          VALUES (?, ?, ?, ?, ?)
+        `, [content, itemType, itemId, userId, parentId]);
+
+        const commentId = result.insertId;
+
+        // Get the created comment with user info
+        const [commentRows] = await database.execute(`
+          SELECT c.*, u.username, u.profile_picture, u.first_name, u.last_name
+          FROM comments c
+          JOIN users u ON c.created_by = u.id
+          WHERE c.id = ?
+        `, [commentId]);
+
+        const comment = commentRows[0];
+
+        // Broadcast to item room
+        const roomId = `${itemType}:${itemId}`;
+        io.to(roomId).emit('comment:created', {
+          comment,
+          timestamp: new Date()
+        });
+
+        console.log(`💬 Comment created on ${itemType}:${itemId} by user ${userId}`);
+      } catch (error) {
+        console.error('comment:create error:', error);
+        socket.emit('error', { message: 'Failed to create comment' });
+      }
+    });
+
+    // Update comment
+    socket.on('comment:update', async ({ commentId, content }) => {
+      try {
+        // Verify ownership
+        const [commentRows] = await database.execute(
+          'SELECT * FROM comments WHERE id = ? AND created_by = ?',
+          [commentId, userId]
+        );
+
+        if (commentRows.length === 0) {
+          socket.emit('error', { message: 'Comment not found or permission denied' });
+          return;
+        }
+
+        const comment = commentRows[0];
+
+        // Update comment
+        await database.execute(
+          'UPDATE comments SET content = ?, updated_at = NOW() WHERE id = ?',
+          [content, commentId]
+        );
+
+        // Broadcast to item room
+        const roomId = `${comment.commentable_type}:${comment.commentable_id}`;
+        io.to(roomId).emit('comment:updated', {
+          commentId,
+          content,
+          updatedAt: new Date(),
+          userId
+        });
+
+        console.log(`💬 Comment ${commentId} updated by user ${userId}`);
+      } catch (error) {
+        console.error('comment:update error:', error);
+        socket.emit('error', { message: 'Failed to update comment' });
+      }
+    });
+
+    // Delete comment
+    socket.on('comment:delete', async ({ commentId }) => {
+      try {
+        // Verify ownership
+        const [commentRows] = await database.execute(
+          'SELECT * FROM comments WHERE id = ? AND created_by = ?',
+          [commentId, userId]
+        );
+
+        if (commentRows.length === 0) {
+          socket.emit('error', { message: 'Comment not found or permission denied' });
+          return;
+        }
+
+        const comment = commentRows[0];
+
+        // Delete comment
+        await database.execute('DELETE FROM comments WHERE id = ?', [commentId]);
+
+        // Broadcast to item room
+        const roomId = `${comment.commentable_type}:${comment.commentable_id}`;
+        io.to(roomId).emit('comment:deleted', {
+          commentId,
+          userId,
+          timestamp: new Date()
+        });
+
+        console.log(`💬 Comment ${commentId} deleted by user ${userId}`);
+      } catch (error) {
+        console.error('comment:delete error:', error);
+        socket.emit('error', { message: 'Failed to delete comment' });
+      }
+    });
+
+    // Add/remove comment reaction
+    socket.on('comment:react', async ({ commentId, emoji, action }) => {
+      try {
+        if (action === 'add') {
+          await database.execute(`
+            INSERT IGNORE INTO comment_reactions (comment_id, user_id, emoji)
+            VALUES (?, ?, ?)
+          `, [commentId, userId, emoji]);
+        } else if (action === 'remove') {
+          await database.execute(
+            'DELETE FROM comment_reactions WHERE comment_id = ? AND user_id = ? AND emoji = ?',
+            [commentId, userId, emoji]
+          );
+        }
+
+        // Get updated reaction counts
+        const [reactionRows] = await database.execute(`
+          SELECT emoji, COUNT(*) as count
+          FROM comment_reactions
+          WHERE comment_id = ?
+          GROUP BY emoji
+        `, [commentId]);
+
+        // Get comment details for broadcasting
+        const [commentRows] = await database.execute(
+          'SELECT commentable_type, commentable_id FROM comments WHERE id = ?',
+          [commentId]
+        );
+
+        if (commentRows.length > 0) {
+          const comment = commentRows[0];
+          const roomId = `${comment.commentable_type}:${comment.commentable_id}`;
+          
+          io.to(roomId).emit('reaction:updated', {
+            commentId,
+            reactions: reactionRows,
+            userId,
+            action,
+            emoji,
+            timestamp: new Date()
+          });
+        }
+
+        console.log(`🎭 Reaction ${action}: ${emoji} on comment ${commentId} by user ${userId}`);
+      } catch (error) {
+        console.error('comment:react error:', error);
+        socket.emit('error', { message: 'Failed to update reaction' });
+      }
+    });
+
+    // ===========================================
+    // PHASE 2: COLLABORATIVE TASK EVENTS
+    // ===========================================
+
+    // User starts editing task
+    socket.on('task:join', async ({ taskId }) => {
+      try {
+        const roomId = `task:${taskId}`;
+        socket.join(roomId);
+
+        // Add to collaborative sessions
+        if (!collaborativeSessions.has(roomId)) {
+          collaborativeSessions.set(roomId, new Set());
+        }
+        collaborativeSessions.get(roomId).add(userId);
+
+        // Store in database
+        await database.execute(`
+          INSERT INTO collaborative_sessions (item_type, item_id, user_id, is_active)
+          VALUES ('task', ?, ?, true)
+          ON DUPLICATE KEY UPDATE
+          is_active = true, updated_at = NOW()
+        `, [taskId, userId]);
+
+        // Broadcast to others in the room
+        socket.to(roomId).emit('user:joined_editing', {
+          userId,
+          itemType: 'task',
+          itemId: taskId,
+          timestamp: new Date()
+        });
+
+        console.log(`📝 User ${userId} started editing task ${taskId}`);
+      } catch (error) {
+        console.error('task:join error:', error);
+      }
+    });
+
+    // User stops editing task
+    socket.on('task:leave', async ({ taskId }) => {
+      try {
+        const roomId = `task:${taskId}`;
+        socket.leave(roomId);
+
+        // Remove from collaborative sessions
+        if (collaborativeSessions.has(roomId)) {
+          collaborativeSessions.get(roomId).delete(userId);
+        }
+
+        // Update database
+        await database.execute(
+          'UPDATE collaborative_sessions SET is_active = false WHERE item_type = ? AND item_id = ? AND user_id = ?',
+          ['task', taskId, userId]
+        );
+
+        // Broadcast to others
+        socket.to(roomId).emit('user:left_editing', {
+          userId,
+          itemType: 'task',
+          itemId: taskId,
+          timestamp: new Date()
+        });
+
+        console.log(`📝 User ${userId} stopped editing task ${taskId}`);
+      } catch (error) {
+        console.error('task:leave error:', error);
+      }
+    });
+
+    // Task field updated
+    socket.on('task:update', ({ taskId, field, value, version }) => {
+      const roomId = `task:${taskId}`;
+      
+      // Broadcast optimistic update to others
+      socket.to(roomId).emit('task:field_updated', {
+        taskId,
+        field,
+        value,
+        version,
+        userId,
+        timestamp: new Date()
+      });
+
+      console.log(`📝 Task ${taskId} field '${field}' updated by user ${userId}`);
+    });
+
+    // Sync task changes
+    socket.on('task:sync', async ({ taskId, changes }) => {
+      try {
+        const roomId = `task:${taskId}`;
+        
+        // Update collaborative session
+        await database.execute(
+          'UPDATE collaborative_sessions SET session_data = ?, updated_at = NOW() WHERE item_type = ? AND item_id = ? AND user_id = ?',
+          [JSON.stringify(changes), 'task', taskId, userId]
+        );
+
+        // Broadcast sync to others
+        socket.to(roomId).emit('task:synced', {
+          taskId,
+          changes,
+          userId,
+          timestamp: new Date()
+        });
+
+        console.log(`📝 Task ${taskId} synced by user ${userId}`);
+      } catch (error) {
+        console.error('task:sync error:', error);
+      }
+    });
+
+    // ===========================================
+    // PHASE 2: REAL-TIME REACTIONS EVENTS
+    // ===========================================
+
+    // Add emoji reaction
+    socket.on('reaction:add', ({ itemType, itemId, emoji, coordinates }) => {
+      const roomId = `${itemType}:${itemId}`;
+      
+      // Broadcast reaction to room
+      io.to(roomId).emit('reaction:broadcast', {
+        userId,
+        emoji,
+        coordinates,
+        itemType,
+        itemId,
+        timestamp: new Date()
+      });
+
+      console.log(`🎭 Reaction ${emoji} added to ${itemType}:${itemId} by user ${userId}`);
+    });
+
+    // ===========================================
+    // ENHANCED EXISTING EVENTS
+    // ===========================================
+
+    // Join a room for a specific resource (enhanced)
     socket.on('joinRoom', (roomId) => {
       socket.join(roomId);
-      io.to(roomId).emit('userJoinedRoom', { userId, roomId });
-      // Notify others of presence
-      socket.to(roomId).emit('userActivity', { userId, activity: 'viewing' });
+      
+      // Add to collaborative sessions if it's an editable item
+      if (roomId.includes(':')) {
+        if (!collaborativeSessions.has(roomId)) {
+          collaborativeSessions.set(roomId, new Set());
+        }
+        collaborativeSessions.get(roomId).add(userId);
+      }
+
+      io.to(roomId).emit('userJoinedRoom', { 
+        userId, 
+        roomId,
+        timestamp: new Date()
+      });
     });
 
-    // Presence: handle disconnect
-    socket.on('disconnect', () => {
-      if (userId) {
+    // Enhanced cursor updates with collaborative session tracking
+    socket.on('cursorUpdate', async ({ roomId, cursor, selection, userInfo }) => {
+      try {
+        // Update cursor position in database if it's a collaborative session
+        if (roomId.includes(':')) {
+          const [itemType, itemId] = roomId.split(':');
+          await database.execute(`
+            UPDATE collaborative_sessions 
+            SET cursor_position = ?, updated_at = NOW() 
+            WHERE item_type = ? AND item_id = ? AND user_id = ? AND is_active = true
+          `, [JSON.stringify({ cursor, selection }), itemType, itemId, userId]);
+        }
+
+        socket.to(roomId).emit('cursorUpdate', {
+          userId,
+          cursor,
+          selection,
+          userInfo,
+          timestamp: new Date()
+        });
+      } catch (error) {
+        console.error('cursorUpdate error:', error);
+      }
+    });
+
+    // Enhanced disconnect handling
+    socket.on('disconnect', async () => {
+      try {
+        console.log(`🔌 User ${userId} disconnected`);
+
+        // Update user offline status
+        await database.execute(
+          'UPDATE users SET is_online = false, last_seen = NOW() WHERE id = ?',
+          [userId]
+        );
+
+        // Update presence
+        await database.execute(
+          'UPDATE user_presence SET is_online = false, last_activity = NOW() WHERE user_id = ?',
+          [userId]
+        );
+
+        // Clean up collaborative sessions
+        await database.execute(
+          'UPDATE collaborative_sessions SET is_active = false WHERE user_id = ?',
+          [userId]
+        );
+
+        // Remove from online users
+        const userInfo = onlineUsers.get(userId);
+        if (userInfo) {
+          // Broadcast offline status to workspace
+          socket.to(`workspace:${userInfo.workspaceId}`).emit('presence:update', {
+            userId,
+            action: 'offline',
+            timestamp: new Date()
+          });
+        }
         onlineUsers.delete(userId);
+
+        // Clean up collaborative sessions map
+        collaborativeSessions.forEach((userSet, roomId) => {
+          userSet.delete(userId);
+          if (userSet.size === 0) {
+            collaborativeSessions.delete(roomId);
+          }
+        });
+
+        // Broadcast offline status
         io.emit('userOffline', userId);
+      } catch (error) {
+        console.error('disconnect error:', error);
       }
     });
   });
