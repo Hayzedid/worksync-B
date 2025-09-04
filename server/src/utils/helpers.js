@@ -1,6 +1,7 @@
 // src/utils/helpers.js
 import { genSalt, hash, compare } from 'bcrypt';
 import { pool } from '../config/database.js';
+import { sanitizeParams } from './sql.js';
 
 
 const SALT_ROUNDS = 10;
@@ -33,7 +34,7 @@ export async function getOwnerByCommentable(type, id) {
   } else {
     throw new Error('Unknown commentable type');
   }
-  const [rows] = await pool.execute(query, [id]);
+  const [rows] = await pool.execute(query, sanitizeParams([id]));
   return rows[0];
 }
 

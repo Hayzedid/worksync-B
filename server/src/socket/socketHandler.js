@@ -2,6 +2,7 @@
 // Phase 2 Enhanced Socket.IO Handler for Advanced Collaboration
 import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
+import { sanitizeParams } from '../utils/sql.js';
 
 const onlineUsers = new Map(); // userId -> { socketId, userInfo, workspaceId, currentPage }
 const collaborativeSessions = new Map(); // roomId -> Set<userId>
@@ -50,7 +51,7 @@ export default function socketHandler(io) {
     try {
   await pool.execute(
         'UPDATE users SET is_online = true, last_seen = NOW() WHERE id = ?',
-        [userId]
+        sanitizeParams([userId])
       );
     } catch (error) {
       console.error('Failed to update user online status:', error);
@@ -72,7 +73,7 @@ export default function socketHandler(io) {
         });
 
         // Update database presence
-        await database.execute(`
+    await database.execute(`
           INSERT INTO user_presence (user_id, workspace_id, current_page, last_activity, is_online)
           VALUES (?, ?, ?, NOW(), true)
           ON DUPLICATE KEY UPDATE
@@ -80,7 +81,7 @@ export default function socketHandler(io) {
           current_page = VALUES(current_page),
           last_activity = VALUES(last_activity),
           is_online = VALUES(is_online)
-        `, [userId, workspaceId, currentPage]);
+    `, sanitizeParams([userId, workspaceId, currentPage]));
 
         // Join workspace room
         socket.join(`workspace:${workspaceId}`);
@@ -106,10 +107,10 @@ export default function socketHandler(io) {
         onlineUsers.delete(userId);
 
         // Update database
-        await database.execute(
-          'UPDATE user_presence SET is_online = false, last_activity = NOW() WHERE user_id = ?',
-          [userId]
-        );
+          await database.execute(
+            'UPDATE user_presence SET is_online = false, last_activity = NOW() WHERE user_id = ?',
+            sanitizeParams([userId])
+          );
 
         // Leave workspace room
         socket.leave(`workspace:${workspaceId}`);
@@ -135,10 +136,10 @@ export default function socketHandler(io) {
           userInfo.lastActivity = new Date();
           
           // Update database
-          await database.execute(
-            'UPDATE user_presence SET last_activity = NOW(), session_data = ? WHERE user_id = ?',
-            [JSON.stringify({ activity, metadata }), userId]
-          );
+            await database.execute(
+              'UPDATE user_presence SET last_activity = NOW(), session_data = ? WHERE user_id = ?',
+              sanitizeParams([JSON.stringify({ activity, metadata }), userId])
+            );
 
           // Broadcast activity to workspace
           socket.to(`workspace:${workspaceId}`).emit('presence:update', {
@@ -164,17 +165,17 @@ export default function socketHandler(io) {
         const [result] = await database.execute(`
           INSERT INTO comments (content, commentable_type, commentable_id, created_by, parent_id)
           VALUES (?, ?, ?, ?, ?)
-        `, [content, itemType, itemId, userId, parentId]);
+        `, sanitizeParams([content, itemType, itemId, userId, parentId]));
 
         const commentId = result.insertId;
 
-        // Get the created comment with user info
-        const [commentRows] = await database.execute(`
+    // Get the created comment with user info
+  const [commentRows] = await database.execute(`
           SELECT c.*, u.username, u.profile_picture, u.first_name, u.last_name
           FROM comments c
           JOIN users u ON c.created_by = u.id
           WHERE c.id = ?
-        `, [commentId]);
+  `, sanitizeParams([commentId]));
 
         const comment = commentRows[0];
 
@@ -198,7 +199,7 @@ export default function socketHandler(io) {
         // Verify ownership
         const [commentRows] = await database.execute(
           'SELECT * FROM comments WHERE id = ? AND created_by = ?',
-          [commentId, userId]
+          sanitizeParams([commentId, userId])
         );
 
         if (commentRows.length === 0) {
@@ -209,10 +210,10 @@ export default function socketHandler(io) {
         const comment = commentRows[0];
 
         // Update comment
-        await database.execute(
-          'UPDATE comments SET content = ?, updated_at = NOW() WHERE id = ?',
-          [content, commentId]
-        );
+          await database.execute(
+            'UPDATE comments SET content = ?, updated_at = NOW() WHERE id = ?',
+            sanitizeParams([content, commentId])
+          );
 
         // Broadcast to item room
         const roomId = `${comment.commentable_type}:${comment.commentable_id}`;
@@ -247,7 +248,7 @@ export default function socketHandler(io) {
         const comment = commentRows[0];
 
         // Delete comment
-        await database.execute('DELETE FROM comments WHERE id = ?', [commentId]);
+    await database.execute('DELETE FROM comments WHERE id = ?', sanitizeParams([commentId]));
 
         // Broadcast to item room
         const roomId = `${comment.commentable_type}:${comment.commentable_id}`;
@@ -324,19 +325,16 @@ export default function socketHandler(io) {
         const roomId = `task:${taskId}`;
         socket.join(roomId);
 
-        // Add to collaborative sessions
         if (!collaborativeSessions.has(roomId)) {
           collaborativeSessions.set(roomId, new Set());
         }
         collaborativeSessions.get(roomId).add(userId);
 
         // Store in database
-        await database.execute(`
-          INSERT INTO collaborative_sessions (item_type, item_id, user_id, is_active)
-          VALUES ('task', ?, ?, true)
-          ON DUPLICATE KEY UPDATE
-          is_active = true, updated_at = NOW()
-        `, [taskId, userId]);
+        await database.execute(
+          'INSERT INTO collaborative_sessions (item_type, item_id, user_id, is_active) VALUES (\'task\', ?, ?, true) ON DUPLICATE KEY UPDATE is_active = true, updated_at = NOW()',
+          sanitizeParams([taskId, userId])
+        );
 
         // Broadcast to others in the room
         socket.to(roomId).emit('user:joined_editing', {
@@ -364,10 +362,10 @@ export default function socketHandler(io) {
         }
 
         // Update database
-        await database.execute(
-          'UPDATE collaborative_sessions SET is_active = false WHERE item_type = ? AND item_id = ? AND user_id = ?',
-          ['task', taskId, userId]
-        );
+          await database.execute(
+            'UPDATE collaborative_sessions SET is_active = false WHERE item_type = ? AND item_id = ? AND user_id = ?',
+            sanitizeParams(['task', taskId, userId])
+          );
 
         // Broadcast to others
         socket.to(roomId).emit('user:left_editing', {

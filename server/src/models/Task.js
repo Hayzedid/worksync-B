@@ -1,6 +1,15 @@
 // models/taskModel.js
 import { pool } from '../config/database.js';
 
+// Convert undefined -> null for SQL parameters to avoid mysql2 error
+function sanitizeParam(v) {
+  return v === undefined ? null : v;
+}
+
+function sanitizeParams(arr) {
+  return arr.map(sanitizeParam);
+}
+
 // Get all tasks for a user
 export async function getAllTasksByUser(userId, limit = 20, offset = 0) {
   const l = Math.max(0, parseInt(limit, 10) || 20);
@@ -56,7 +65,7 @@ export async function createTask({
       position,
       workspace_id
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
+    sanitizeParams([
       title,
       description,
       due_date,
@@ -71,7 +80,7 @@ export async function createTask({
       actual_hours,
       position,
       workspace_id,
-    ]
+    ])
   );
 
   return result.insertId;
@@ -132,7 +141,7 @@ export async function createTaskInstance(task) {
   // Example: create a new task based on the recurring task
   await pool.execute(
     'INSERT INTO tasks (title, description, assigned_to, created_by, recurrence, due_date, priority, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [task.title, task.description, task.assigned_to, task.created_by, task.recurrence, task.due_date, task.priority, 'pending']
+  sanitizeParams([task.title, task.description, task.assigned_to, task.created_by, task.recurrence, task.due_date, task.priority, 'pending'])
   );
 }
 
@@ -183,9 +192,17 @@ export async function getTaskDependencies(task_id) {
 }
 
 export async function addReaction({ type, user_id, target_type, target_id }) {
+  // Normalize basic fields to avoid DB errors: enforce allowed target types and shorten values
+  const allowedTargets = new Set(['task', 'comment', 'note']);
+  let ttRaw = typeof target_type === 'string' ? target_type.trim().toLowerCase() : String(target_type).toLowerCase();
+  const tt = allowedTargets.has(ttRaw) ? ttRaw : 'task';
+  const tid = target_id == null ? null : parseInt(target_id, 10);
+  const uid = user_id == null ? null : parseInt(user_id, 10);
+  const tp = typeof type === 'string' ? type.trim().slice(0, 50) : String(type).slice(0, 50);
+
   await pool.execute(
     'INSERT INTO reactions (type, user_id, target_type, target_id) VALUES (?, ?, ?, ?)',
-    [type, user_id, target_type, target_id]
+    sanitizeParams([tp, uid, tt, tid])
   );
 }
 
@@ -199,7 +216,7 @@ export async function removeReaction(reaction_id, user_id) {
 export async function getReactions({ target_type, target_id }) {
   const [rows] = await pool.execute(
     'SELECT id, type, user_id, created_at FROM reactions WHERE target_type = ? AND target_id = ?',
-    [target_type, target_id]
+    sanitizeParams([target_type, target_id])
   );
   return rows;
 }

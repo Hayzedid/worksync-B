@@ -1,5 +1,6 @@
 // src/controllers/authController.js
 import { pool } from '../config/database.js';
+import { sanitizeParams } from '../utils/sql.js';
 import { generateToken } from '../config/jwt.js';
 import { hashPassword, verifyPassword } from '../utils/helpers.js';
 import crypto from 'crypto';
@@ -24,7 +25,7 @@ export const registerUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
     }
 
-    const [existingUsers] = await pool.execute('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
+  const [existingUsers] = await pool.execute('SELECT * FROM users WHERE email = ?', sanitizeParams([email.toLowerCase()]));
     if (existingUsers.length > 0) {
       return res.status(400).json({ success: false, message: 'Email is already in use' });
     }
@@ -33,7 +34,7 @@ export const registerUser = async (req, res, next) => {
 
     const [result] = await pool.query(
       'INSERT INTO users (email, password_hash, first_name, last_name, username) VALUES (?, ?, ?, ?, ?)',
-      [email.toLowerCase(), hashedPassword, firstName, lastName, userName]
+      sanitizeParams([email.toLowerCase(), hashedPassword, firstName, lastName, userName])
     );
 
     res.status(201).json({
@@ -144,7 +145,7 @@ export const loginUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
-    const [users] = await pool.execute('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
+  const [users] = await pool.execute('SELECT * FROM users WHERE email = ?', sanitizeParams([email.toLowerCase()]));
     console.log('User lookup result:', users);
     if (users.length === 0) {
       console.log('No user found for email:', email);

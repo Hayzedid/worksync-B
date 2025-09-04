@@ -1,5 +1,6 @@
 import { verifyToken } from '../config/jwt.js';
 import { pool } from '../config/database.js';
+import { sanitizeParams } from '../utils/sql.js';
 
 async function authenticateToken(req, res, next) {
   // Debug: Log cookies and headers for troubleshooting
@@ -30,7 +31,7 @@ async function authenticateToken(req, res, next) {
 
     const [users] = await pool.execute(
       'SELECT id, email, first_name, last_name, is_active FROM users WHERE id = ?',
-      [decoded.id]
+      sanitizeParams([decoded.id])
     );
 
     if (users.length === 0 || !users[0].is_active) {
