@@ -1,18 +1,19 @@
 // models/userModel.js
 import { pool } from '../config/database.js';
+import { sanitizeParams } from '../utils/sql.js';
 
 export async function getUserById(userId) {
-  const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [userId]);
+  const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', sanitizeParams([userId]));
   return rows[0];
 }
 
 export async function getUserByEmail(email) {
-  const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
+  const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', sanitizeParams([email.toLowerCase()]));
   return rows[0] || null;
 }
 
 export async function updateUserPassword(userId, password_hash) {
-  const [result] = await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash, userId]);
+  const [result] = await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', sanitizeParams([password_hash, userId]));
   return result.affectedRows > 0;
 }
 
@@ -41,7 +42,7 @@ export const updateUser = async (id, username, profile_picture, email) => {
   query += fields.join(',') + ' WHERE id = ?';
   params.push(id);
   
-  const [result] = await pool.execute(query, params);
+  const [result] = await pool.execute(query, sanitizeParams(params));
   return result.affectedRows > 0;
 };
 
@@ -55,7 +56,7 @@ export const getAllUsers = async () => {
 export const getPublicUserById = async (id) => {
   const [rows] = await pool.execute(
     'SELECT id, username, email FROM users WHERE id = ?',
-    [id]
+    sanitizeParams([id])
   );
   return rows[0];
 };
@@ -63,7 +64,7 @@ export const getPublicUserById = async (id) => {
 export const deleteUserById = async (id) => {
   const [result] = await pool.execute(
     'DELETE FROM users WHERE id = ?',
-    [id]
+    sanitizeParams([id])
   );
   return result.affectedRows > 0;
 };

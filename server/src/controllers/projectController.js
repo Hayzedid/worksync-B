@@ -1,5 +1,6 @@
 // Update project by ID
-import { getProjectsService } from '../services/projectService.js';
+import { getProjectsService, getProjectService, updateProjectService, deleteProjectService } from '../services/projectService.js';
+import { normalizeStatus } from '../utils/status.js';
 export const updateProject = async (req, res, next) => {
   try {
     const updateData = {
@@ -84,12 +85,16 @@ export const createProject = async (req, res, next) => {
       userId: req.user.id,
       name: name ?? null,
       description: description ?? '',
-      status: status ?? 'active',
+      status: normalizeStatus(status),
       workspace_id: workspace_id ?? null
     };
-    console.log('Creating project with data:', projectData);
-    const projectId = await createProjectService(projectData);
-    return res.status(201).json({ success: true, message: 'Project created', projectId });
+  console.log('Creating project with data:', projectData);
+  // Dynamic import to avoid potential circular dependency issues at module-evaluation time
+  const { createProjectService, getProjectService: getProjectServiceFromService } = await import('../services/projectService.js');
+  const projectId = await createProjectService(projectData);
+  // Fetch the full created project to return complete object for optimistic updates
+  const created = await getProjectServiceFromService(projectId, req.user.id);
+  return res.status(201).json({ success: true, message: 'Project created', project: created });
   } catch (err) {
     console.error('Error creating project:', err);
     return res.status(500).json({ success: false, message: err.message || 'Server error' });
