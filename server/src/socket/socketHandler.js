@@ -29,14 +29,19 @@ export default function socketHandler(io) {
   // Authenticate socket connections using JWT
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token || socket.handshake.headers?.authorization?.split(' ')[1];
+    
     if (!token) {
+      console.log('❌ Socket connection rejected: No token provided');
       return next(new Error('Authentication error: Token missing'));
     }
+    
     try {
-      const user = jwt.verify(token, process.env.JWT || 'your_jwt_secret');
+      const user = jwt.verify(token, process.env.JWT_SECRET);
       socket.user = user;
+      console.log(`✅ Socket authenticated for user: ${user.id}`);
       next();
     } catch (err) {
+      console.log('❌ Socket connection rejected: Invalid token', err.message);
       next(new Error('Authentication error: Invalid token'));
     }
   });
@@ -49,12 +54,15 @@ export default function socketHandler(io) {
 
     // Update user online status in database
     try {
-  await pool.execute(
-        'UPDATE users SET is_online = true, last_seen = NOW() WHERE id = ?',
-        sanitizeParams([userId])
+      // Set workspace_id to 1 as default for now (you can modify this based on actual workspace context)
+      await pool.execute(
+        'INSERT INTO user_presence (user_id, workspace_id, is_online, last_activity) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE is_online = ?, last_activity = NOW()',
+        sanitizeParams([userId, 1, true, true])
       );
     } catch (error) {
       console.error('Failed to update user online status:', error);
+      // Fallback: just log that user is online without database update
+      console.log(`📝 User ${userId} is online (database update failed)`);
     }
 
     // ===========================================
@@ -73,7 +81,7 @@ export default function socketHandler(io) {
         });
 
         // Update database presence
-    await database.execute(`
+    await pool.execute(`
           INSERT INTO user_presence (user_id, workspace_id, current_page, last_activity, is_online)
           VALUES (?, ?, ?, NOW(), true)
           ON DUPLICATE KEY UPDATE
@@ -107,7 +115,7 @@ export default function socketHandler(io) {
         onlineUsers.delete(userId);
 
         // Update database
-          await database.execute(
+          await pool.execute(
             'UPDATE user_presence SET is_online = false, last_activity = NOW() WHERE user_id = ?',
             sanitizeParams([userId])
           );
@@ -136,7 +144,7 @@ export default function socketHandler(io) {
           userInfo.lastActivity = new Date();
           
           // Update database
-            await database.execute(
+            await pool.execute(
               'UPDATE user_presence SET last_activity = NOW(), session_data = ? WHERE user_id = ?',
               sanitizeParams([JSON.stringify({ activity, metadata }), userId])
             );
@@ -162,7 +170,7 @@ export default function socketHandler(io) {
     // Create new comment
     socket.on('comment:create', async ({ itemType, itemId, content, parentId = null }) => {
       try {
-        const [result] = await database.execute(`
+        const [result] = await pool.execute(`
           INSERT INTO comments (content, commentable_type, commentable_id, created_by, parent_id)
           VALUES (?, ?, ?, ?, ?)
         `, sanitizeParams([content, itemType, itemId, userId, parentId]));
@@ -170,7 +178,7 @@ export default function socketHandler(io) {
         const commentId = result.insertId;
 
     // Get the created comment with user info
-  const [commentRows] = await database.execute(`
+  const [commentRows] = await pool.execute(`
           SELECT c.*, u.username, u.profile_picture, u.first_name, u.last_name
           FROM comments c
           JOIN users u ON c.created_by = u.id
@@ -197,7 +205,7 @@ export default function socketHandler(io) {
     socket.on('comment:update', async ({ commentId, content }) => {
       try {
         // Verify ownership
-        const [commentRows] = await database.execute(
+        const [commentRows] = await pool.execute(
           'SELECT * FROM comments WHERE id = ? AND created_by = ?',
           sanitizeParams([commentId, userId])
         );
@@ -210,7 +218,7 @@ export default function socketHandler(io) {
         const comment = commentRows[0];
 
         // Update comment
-          await database.execute(
+          await pool.execute(
             'UPDATE comments SET content = ?, updated_at = NOW() WHERE id = ?',
             sanitizeParams([content, commentId])
           );
@@ -235,7 +243,7 @@ export default function socketHandler(io) {
     socket.on('comment:delete', async ({ commentId }) => {
       try {
         // Verify ownership
-        const [commentRows] = await database.execute(
+        const [commentRows] = await pool.execute(
           'SELECT * FROM comments WHERE id = ? AND created_by = ?',
           [commentId, userId]
         );
@@ -248,7 +256,7 @@ export default function socketHandler(io) {
         const comment = commentRows[0];
 
         // Delete comment
-    await database.execute('DELETE FROM comments WHERE id = ?', sanitizeParams([commentId]));
+    await pool.execute('DELETE FROM comments WHERE id = ?', sanitizeParams([commentId]));
 
         // Broadcast to item room
         const roomId = `${comment.commentable_type}:${comment.commentable_id}`;
@@ -269,19 +277,19 @@ export default function socketHandler(io) {
     socket.on('comment:react', async ({ commentId, emoji, action }) => {
       try {
         if (action === 'add') {
-          await database.execute(`
+          await pool.execute(`
             INSERT IGNORE INTO comment_reactions (comment_id, user_id, emoji)
             VALUES (?, ?, ?)
           `, [commentId, userId, emoji]);
         } else if (action === 'remove') {
-          await database.execute(
+          await pool.execute(
             'DELETE FROM comment_reactions WHERE comment_id = ? AND user_id = ? AND emoji = ?',
             [commentId, userId, emoji]
           );
         }
 
         // Get updated reaction counts
-        const [reactionRows] = await database.execute(`
+        const [reactionRows] = await pool.execute(`
           SELECT emoji, COUNT(*) as count
           FROM comment_reactions
           WHERE comment_id = ?
@@ -289,7 +297,7 @@ export default function socketHandler(io) {
         `, [commentId]);
 
         // Get comment details for broadcasting
-        const [commentRows] = await database.execute(
+        const [commentRows] = await pool.execute(
           'SELECT commentable_type, commentable_id FROM comments WHERE id = ?',
           [commentId]
         );
@@ -331,7 +339,7 @@ export default function socketHandler(io) {
         collaborativeSessions.get(roomId).add(userId);
 
         // Store in database
-        await database.execute(
+        await pool.execute(
           'INSERT INTO collaborative_sessions (item_type, item_id, user_id, is_active) VALUES (\'task\', ?, ?, true) ON DUPLICATE KEY UPDATE is_active = true, updated_at = NOW()',
           sanitizeParams([taskId, userId])
         );
@@ -362,7 +370,7 @@ export default function socketHandler(io) {
         }
 
         // Update database
-          await database.execute(
+          await pool.execute(
             'UPDATE collaborative_sessions SET is_active = false WHERE item_type = ? AND item_id = ? AND user_id = ?',
             sanitizeParams(['task', taskId, userId])
           );
@@ -404,7 +412,7 @@ export default function socketHandler(io) {
         const roomId = `task:${taskId}`;
         
         // Update collaborative session
-        await database.execute(
+        await pool.execute(
           'UPDATE collaborative_sessions SET session_data = ?, updated_at = NOW() WHERE item_type = ? AND item_id = ? AND user_id = ?',
           [JSON.stringify(changes), 'task', taskId, userId]
         );
@@ -473,7 +481,7 @@ export default function socketHandler(io) {
         // Update cursor position in database if it's a collaborative session
         if (roomId.includes(':')) {
           const [itemType, itemId] = roomId.split(':');
-          await database.execute(`
+          await pool.execute(`
             UPDATE collaborative_sessions 
             SET cursor_position = ?, updated_at = NOW() 
             WHERE item_type = ? AND item_id = ? AND user_id = ? AND is_active = true
@@ -497,20 +505,18 @@ export default function socketHandler(io) {
       try {
         console.log(`🔌 User ${userId} disconnected`);
 
-        // Update user offline status
-        await database.execute(
-          'UPDATE users SET is_online = false, last_seen = NOW() WHERE id = ?',
-          [userId]
-        );
-
-        // Update presence
-        await database.execute(
-          'UPDATE user_presence SET is_online = false, last_activity = NOW() WHERE user_id = ?',
-          [userId]
-        );
+        // Update user presence status
+        try {
+          await pool.execute(
+            'UPDATE user_presence SET is_online = false, last_activity = NOW() WHERE user_id = ?',
+            sanitizeParams([userId])
+          );
+        } catch (dbError) {
+          console.error('Failed to update user presence on disconnect:', dbError);
+        }
 
         // Clean up collaborative sessions
-        await database.execute(
+        await pool.execute(
           'UPDATE collaborative_sessions SET is_active = false WHERE user_id = ?',
           [userId]
         );
