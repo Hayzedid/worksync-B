@@ -8,8 +8,16 @@ import {
   deleteWorkspaceService
   // ...other service functions
 } from '../services/workspaceService.js';
-import { getUserByEmail } from '../models/User.js';
+import { getUserByEmail, getUserById } from '../models/User.js';
 import { addUserToWorkspace, getWorkspaceMembers } from '../models/Workspace.js';
+import { 
+  createWorkspaceInvitation, 
+  getInvitationByToken, 
+  acceptInvitation, 
+  getPendingInvitationsByEmail,
+  getWorkspaceInvitations 
+} from '../models/WorkspaceInvitation.js';
+import { sendWorkspaceInvitation } from '../services/emailServices.js';
 
 // Create new workspace
 export async function createWorkspaceHandler(req, res) {
@@ -26,22 +34,173 @@ export async function createWorkspaceHandler(req, res) {
   }
 }
 
-// Invite by email -> resolves to user_id and adds as member
+// Invite by email -> handles both existing and new users
 export async function inviteByEmailHandler(req, res) {
   const { workspace_id, email } = req.body;
+  const inviterId = req.user.id;
+  
   if (!workspace_id || !email) {
     return res.status(400).json({ error: 'workspace_id and email are required' });
   }
+
   try {
-    const user = await getUserByEmail(String(email).toLowerCase().trim());
-    if (!user) {
-      return res.status(404).json({ error: 'User with that email not found' });
+    // Get the inviter's full details from database
+    const inviterUser = await getUserById(inviterId);
+    if (!inviterUser) {
+      return res.status(401).json({ error: 'Inviter not found' });
     }
-    await addUserToWorkspace(workspace_id, user.id);
-    return res.status(200).json({ message: 'User invited', userId: user.id });
+
+    // Check if workspace exists and user has permission to invite
+    const workspace = await getWorkspaceService(workspace_id);
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+
+    // For now, let anyone in the workspace invite others
+    // TODO: Add proper permission check (only admins/creators can invite)
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const inviterName = `${inviterUser.first_name} ${inviterUser.last_name}`;
+    
+    // Check if user already exists
+    const existingUser = await getUserByEmail(normalizedEmail);
+    
+    if (existingUser) {
+      // Check if user is already a member
+      const members = await getWorkspaceMembers(workspace_id);
+      const isAlreadyMember = members.some(member => member.id === existingUser.id);
+      
+      if (isAlreadyMember) {
+        return res.status(400).json({ error: 'User is already a member of this workspace' });
+      }
+
+      // Add existing user directly to workspace
+      await addUserToWorkspace(workspace_id, existingUser.id);
+      
+      // Send notification email for existing user
+      try {
+        const inviteUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/workspace?ws=${workspace_id}`;
+        await sendWorkspaceInvitation({
+          to: normalizedEmail,
+          workspaceName: workspace.name,
+          inviterName: inviterName,
+          inviteUrl,
+          isExistingUser: true
+        });
+      } catch (emailError) {
+        console.error('Failed to send notification email:', emailError);
+        // Don't fail the invitation if email fails
+      }
+      
+      return res.status(200).json({ 
+        message: 'User added to workspace and notified', 
+        userId: existingUser.id 
+      });
+    } else {
+      // Create invitation token for new user
+      const invitation = await createWorkspaceInvitation({
+        workspace_id,
+        email: normalizedEmail,
+        invited_by: inviterId,
+        expiresInHours: 72 // 3 days
+      });
+
+      // Send invitation email
+      try {
+        const inviteUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/invite/${invitation.invite_token}`;
+        await sendWorkspaceInvitation({
+          to: normalizedEmail,
+          workspaceName: workspace.name,
+          inviterName: inviterName,
+          inviteUrl,
+          isExistingUser: false
+        });
+        
+        return res.status(200).json({ 
+          message: 'Invitation sent successfully', 
+          invitationId: invitation.id,
+          expiresAt: invitation.expires_at
+        });
+      } catch (emailError) {
+        console.error('Failed to send invitation email:', emailError);
+        return res.status(500).json({ 
+          error: 'Failed to send invitation email',
+          details: emailError.message 
+        });
+      }
+    }
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Failed to invite user' });
+    console.error('Invitation error:', error);
+    return res.status(500).json({ error: 'Failed to process invitation' });
+  }
+}
+
+// Get invitation details by token (for invite page)
+export async function getInvitationHandler(req, res) {
+  const { token } = req.params;
+  
+  try {
+    const invitation = await getInvitationByToken(token);
+    
+    if (!invitation) {
+      return res.status(404).json({ error: 'Invitation not found or expired' });
+    }
+
+    return res.status(200).json({
+      workspaceName: invitation.workspace_name,
+      inviterName: `${invitation.inviter_first_name} ${invitation.inviter_last_name}`,
+      email: invitation.email,
+      expiresAt: invitation.expires_at
+    });
+  } catch (error) {
+    console.error('Error fetching invitation:', error);
+    return res.status(500).json({ error: 'Failed to fetch invitation details' });
+  }
+}
+
+// Accept invitation (after user signs up or logs in)
+export async function acceptInvitationHandler(req, res) {
+  const { token } = req.params;
+  const userId = req.user.id;
+  
+  try {
+    const invitation = await getInvitationByToken(token);
+    
+    if (!invitation) {
+      return res.status(404).json({ error: 'Invitation not found or expired' });
+    }
+
+    // Verify the user's email matches the invitation
+    if (req.user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+      return res.status(400).json({ error: 'User email does not match invitation' });
+    }
+
+    // Add user to workspace
+    await addUserToWorkspace(invitation.workspace_id, userId);
+    
+    // Mark invitation as accepted
+    await acceptInvitation(token);
+
+    return res.status(200).json({ 
+      message: 'Invitation accepted successfully',
+      workspaceId: invitation.workspace_id
+    });
+  } catch (error) {
+    console.error('Error accepting invitation:', error);
+    return res.status(500).json({ error: 'Failed to accept invitation' });
+  }
+}
+
+// Get workspace invitations (admin view)
+export async function getWorkspaceInvitationsHandler(req, res) {
+  const { id: workspace_id } = req.params;
+  
+  try {
+    const invitations = await getWorkspaceInvitations(workspace_id);
+    return res.status(200).json(invitations);
+  } catch (error) {
+    console.error('Error fetching invitations:', error);
+    return res.status(500).json({ error: 'Failed to fetch invitations' });
   }
 }
 

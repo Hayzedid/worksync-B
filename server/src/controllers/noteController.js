@@ -51,8 +51,9 @@ export async function create_Note(req, res, next) {
 export async function get_Notes(req, res, next) {
   try {
     const userId = req.user.id;
-    const { limit = 20, offset = 0 } = req.query;
-    const { notes, total } = await getNotesService({ userId, limit, offset });
+    const { limit = 20, offset = 0, workspace_id } = req.query;
+    const workspaceId = Number.isFinite(parseInt(workspace_id, 10)) ? parseInt(workspace_id, 10) : undefined;
+    const { notes, total } = await getNotesService({ userId, limit, offset, workspaceId });
     return res.status(200).json({ success: true, notes, total });
   } catch (error) {
     next(error);

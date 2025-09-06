@@ -79,16 +79,21 @@ export const getProject = async (req, res, next) => {
 
 export const createProject = async (req, res, next) => {
   try {
+    // Resolve workspace context from various sources (query, headers, referer, body)
+    const contextWorkspaceId = resolveWorkspaceId(req);
+    
     // Ensure all required fields are present and set to null if undefined
     const { name, description, status, workspace_id } = req.body;
+    const finalWorkspaceId = workspace_id ?? contextWorkspaceId;
+    
     const projectData = {
       userId: req.user.id,
       name: name ?? null,
       description: description ?? '',
       status: normalizeStatus(status),
-      workspace_id: workspace_id ?? null
+      // Use explicit workspace_id from body if provided, otherwise use resolved context
+      workspace_id: finalWorkspaceId
     };
-  console.log('Creating project with data:', projectData);
   // Dynamic import to avoid potential circular dependency issues at module-evaluation time
   const { createProjectService, getProjectService: getProjectServiceFromService } = await import('../services/projectService.js');
   const projectId = await createProjectService(projectData);
@@ -102,17 +107,14 @@ export const createProject = async (req, res, next) => {
 };
 
 export const deleteProject = async (req, res, next) => {
-  console.log('[deleteProject] ENTRY req.params:', req.params, 'req.user:', req.user);
   try {
     // Enhanced debug logging for raw values
     const projectIdRaw = req.params.id;
     const userIdRaw = req.user && req.user.id;
-  console.log('[deleteProject] Raw params:', { projectIdRaw, userIdRaw });
 
     // Parse and validate
     const projectId = projectIdRaw !== undefined ? Number(projectIdRaw) : null;
     const userId = userIdRaw !== undefined ? Number(userIdRaw) : null;
-  console.log('[deleteProject] Parsed params:', { projectId, userId, typeofProjectId: typeof projectId, typeofUserId: typeof userId });
 
     if (
       projectId === null || isNaN(projectId) ||
@@ -121,7 +123,6 @@ export const deleteProject = async (req, res, next) => {
       console.error('[deleteProject] Invalid projectId or userId', { projectId, userId });
       return res.status(400).json({ success: false, message: 'Invalid project or user ID' });
     }
-    console.log('[deleteProject] Deleting project with:', { projectId, userId });
     const affectedRows = await deleteProjectService(projectId, userId);
     if (!affectedRows) return res.status(404).json({ success: false, message: 'Project not found' });
     res.json({ success: true, message: 'Project deleted' });
@@ -166,6 +167,12 @@ export async function createProjectTask(req, res, next) {
     const { id } = req.params;
     const { title, status = 'todo' } = req.body;
     
+    // Get the project details to inherit workspace_id
+    const project = await getProjectService(id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
+    
     // Import the task service/model
     const { createTaskService } = await import('../services/taskService.js');
     
@@ -173,7 +180,9 @@ export async function createProjectTask(req, res, next) {
       title,
       status,
       project_id: parseInt(id),
-      created_by: req.user.id
+      created_by: req.user.id,
+      // Inherit workspace_id from parent project
+      workspace_id: project.workspace_id || project.workspace_join_id || null
     };
     
     const taskId = await createTaskService(taskData);
@@ -195,10 +204,17 @@ export async function getProjectNotes(req, res, next) {
 }
 
 // Create note in a specific project
+// Create note in a specific project
 export async function createProjectNote(req, res, next) {
   try {
     const { id } = req.params;
-    const { title, content } = req.body;
+    const { title, content, tags } = req.body;
+    
+    // Get the project details to inherit workspace_id
+    const project = await getProjectService(id, req.user.id);
+    if (!project) {
+      return res.status(404).json({ success: false, message: 'Project not found' });
+    }
     
     // Import the note service/model
     const { createNoteService } = await import('../services/noteService.js');
@@ -206,8 +222,11 @@ export async function createProjectNote(req, res, next) {
     const noteData = {
       title,
       content,
+      tags: Array.isArray(tags) ? tags : [],
       project_id: parseInt(id),
-      created_by: req.user.id
+      created_by: req.user.id,
+      // Inherit workspace_id from parent project
+      workspace_id: project.workspace_id || project.workspace_join_id || null
     };
     
     const noteId = await createNoteService(noteData);
