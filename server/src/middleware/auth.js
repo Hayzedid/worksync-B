@@ -3,9 +3,6 @@ import { pool } from '../config/database.js';
 import { sanitizeParams } from '../utils/sql.js';
 
 async function authenticateToken(req, res, next) {
-  // Debug: Log cookies and headers for troubleshooting
-  console.log('Auth middleware: cookies:', req.cookies);
-  console.log('Auth middleware: headers:', req.headers);
   try {
     let token;
     const authHeader = req.headers['authorization'];
