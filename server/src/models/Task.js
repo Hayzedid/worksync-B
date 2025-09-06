@@ -11,13 +11,28 @@ function sanitizeParams(arr) {
 }
 
 // Get all tasks for a user
-export async function getAllTasksByUser(userId, limit = 20, offset = 0) {
+export async function getAllTasksByUser(userId, limit = 20, offset = 0, workspaceId) {
   const l = Math.max(0, parseInt(limit, 10) || 20);
   const o = Math.max(0, parseInt(offset, 10) || 0);
-  const [rows] = await pool.execute(
-    `SELECT SQL_CALC_FOUND_ROWS * FROM tasks WHERE created_by = ? ORDER BY created_at DESC LIMIT ${l} OFFSET ${o}`,
-    [userId]
-  );
+  
+  let sql = `SELECT SQL_CALC_FOUND_ROWS t.*, p.name as project_name, w.name as workspace_name, 
+             p.workspace_id as project_workspace_id
+             FROM tasks t
+             LEFT JOIN projects p ON t.project_id = p.id
+             LEFT JOIN workspaces w ON t.workspace_id = w.id
+             WHERE t.created_by = ?`;
+  
+  const params = [userId];
+  
+  if (workspaceId !== undefined) {
+    // Filter by workspace_id - includes both direct workspace tasks and tasks from projects in workspace
+    sql += ' AND (t.workspace_id = ? OR p.workspace_id = ?)';
+    params.push(workspaceId, workspaceId);
+  }
+  
+  sql += ` ORDER BY t.created_at DESC LIMIT ${l} OFFSET ${o}`;
+  
+  const [rows] = await pool.execute(sql, sanitizeParams(params));
   const [[{ 'FOUND_ROWS()': total }]] = await pool.query('SELECT FOUND_ROWS()');
   return { tasks: rows, total };
 }
@@ -87,12 +102,81 @@ export async function createTask({
 }
 
 
-// Update a task
-export async function updateTask(taskId, { title, description, due_date, status }) {
-    const [result] = await pool.execute(
-        'UPDATE tasks SET title = ?, description = ?, due_date = ?, status = ? WHERE id = ?',
-        [title, description, due_date, status, taskId]
-    );
+// Update a task - only update fields that are provided
+export async function updateTask(taskId, updateData) {
+    console.log('🗄️ Task Model: updateTask called with:', { taskId, updateData });
+    
+    const { title, description, due_date, status, priority, assigned_to, project_id, start_date, completion_date, estimated_hours, actual_hours, position } = updateData;
+    
+    // Build dynamic query based on provided fields
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (title !== undefined) {
+        updateFields.push('title = ?');
+        updateValues.push(title);
+    }
+    if (description !== undefined) {
+        updateFields.push('description = ?');
+        updateValues.push(description);
+    }
+    if (due_date !== undefined) {
+        updateFields.push('due_date = ?');
+        updateValues.push(due_date);
+    }
+    if (status !== undefined) {
+        updateFields.push('status = ?');
+        updateValues.push(status);
+    }
+    if (priority !== undefined) {
+        updateFields.push('priority = ?');
+        updateValues.push(priority);
+    }
+    if (assigned_to !== undefined) {
+        updateFields.push('assigned_to = ?');
+        updateValues.push(assigned_to);
+    }
+    if (project_id !== undefined) {
+        updateFields.push('project_id = ?');
+        updateValues.push(project_id);
+    }
+    if (start_date !== undefined) {
+        updateFields.push('start_date = ?');
+        updateValues.push(start_date);
+    }
+    if (completion_date !== undefined) {
+        updateFields.push('completion_date = ?');
+        updateValues.push(completion_date);
+    }
+    if (estimated_hours !== undefined) {
+        updateFields.push('estimated_hours = ?');
+        updateValues.push(estimated_hours);
+    }
+    if (actual_hours !== undefined) {
+        updateFields.push('actual_hours = ?');
+        updateValues.push(actual_hours);
+    }
+    if (position !== undefined) {
+        updateFields.push('position = ?');
+        updateValues.push(position);
+    }
+    
+    if (updateFields.length === 0) {
+        console.log('❌ Task Model: No fields to update');
+        throw new Error('No fields to update');
+    }
+    
+    // Always update the updated_at timestamp
+    updateFields.push('updated_at = NOW()');
+    updateValues.push(taskId);
+    
+    const query = `UPDATE tasks SET ${updateFields.join(', ')} WHERE id = ?`;
+    console.log('🗄️ Task Model: Executing query:', query);
+    console.log('🗄️ Task Model: With values:', updateValues);
+    
+    const [result] = await pool.execute(query, updateValues);
+    
+    console.log('🗄️ Task Model: Query result:', result);
     return result.affectedRows;
 }
 
