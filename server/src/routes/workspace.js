@@ -9,7 +9,10 @@ import {
   removeWorkspaceMemberHandler,
   updateWorkspaceHandler,
   deleteWorkspaceHandler,
-  inviteByEmailHandler
+  inviteByEmailHandler,
+  getInvitationHandler,
+  acceptInvitationHandler,
+  getWorkspaceInvitationsHandler
 } from '../controllers/workspaceController.js';
 import authenticateToken from '../middleware/auth.js';
 
@@ -25,5 +28,10 @@ router.delete('/:id/members/:userId', authenticateToken, removeWorkspaceMemberHa
 router.patch('/:id', authenticateToken, updateWorkspaceHandler);          // Update
 router.delete('/:id', authenticateToken, deleteWorkspaceHandler);         // Delete
 router.post('/invite', authenticateToken, inviteByEmailHandler);          // Invite by email -> { workspace_id, email }
+
+// Invitation routes
+router.get('/invite/:token', getInvitationHandler);                       // Get invitation details (public)
+router.post('/invite/:token/accept', authenticateToken, acceptInvitationHandler); // Accept invitation
+router.get('/:id/invitations', authenticateToken, getWorkspaceInvitationsHandler); // Get workspace invitations
 
 export default router;
