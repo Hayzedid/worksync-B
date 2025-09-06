@@ -15,9 +15,10 @@ import {
     getReactionsController,
     kanbanViewController,
     listViewController,
-    calendarViewController
+    calendarViewController,
+    getTaskStatusOptions
 } from '../controllers/taskController.js';
-import { validateTask } from '../utils/validator.js';
+import { validateTask, validateTaskUpdate } from '../utils/validator.js';
 import { validateRequest } from '../middleware/validation.js';
 import authenticateToken from '../middleware/auth.js';
 
@@ -26,6 +27,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 router.get('/', getTasks);
+router.get('/status-options', getTaskStatusOptions);
 router.get('/search', searchTasksController);
 router.get('/kanban', kanbanViewController);
 router.get('/list', listViewController);
@@ -36,8 +38,8 @@ router.delete('/reactions/:id', removeReactionController);
 router.get('/reactions', getReactionsController);
 router.get('/:id', getSingleTask);
 router.post('/', validateTask, validateRequest, createNewTask);
-router.put('/:id', validateTask, validateRequest, updateTaskById);
-router.patch('/:id', validateTask, validateRequest, updateTaskById);
+router.put('/:id', validateTaskUpdate, validateRequest, updateTaskById);
+router.patch('/:id', validateTaskUpdate, validateRequest, updateTaskById);
 router.delete('/:id', deleteTaskById);
 router.post('/:id/dependencies', addTaskDependencyController);
 router.delete('/:id/dependencies/:blockedById', removeTaskDependencyController);
