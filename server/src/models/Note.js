@@ -65,27 +65,41 @@ export async function deleteNote(noteId, userId) {
 
 
 // Get all notes created by or assigned to a user
-export async function getAllNotesForUser(userId, limit = 20, offset = 0) {
+export async function getAllNotesForUser(userId, limit = 20, offset = 0, workspaceId) {
   const lim = Number.isFinite(Number(limit)) ? Math.max(0, Number(limit)) : 20;
   const off = Number.isFinite(Number(offset)) ? Math.max(0, Number(offset)) : 0;
   if (config.NODE_ENV !== 'production') {
-     
-    console.debug('[getAllNotesForUser] params', { userId, limit: lim, offset: off });
+    console.debug('[getAllNotesForUser] params', { userId, limit: lim, offset: off, workspaceId });
   }
-  const [rows] = await pool.query(
-    `SELECT notes.*, workspaces.name AS workspace_name, projects.name AS project_name
-     FROM notes
-     LEFT JOIN workspaces ON notes.workspace_id = workspaces.id
-     LEFT JOIN projects ON notes.project_id = projects.id
-     WHERE notes.created_by = ?
-     ORDER BY notes.created_at DESC
-     LIMIT ${lim} OFFSET ${off}`,
-  sanitizeParams([userId])
-  );
-  const [[{ total }]] = await pool.query(
-    'SELECT COUNT(*) AS total FROM notes WHERE created_by = ?',
-  sanitizeParams([userId])
-  );
+  
+  let sql = `SELECT n.*, w.name AS workspace_name, p.name AS project_name,
+             p.workspace_id as project_workspace_id
+             FROM notes n
+             LEFT JOIN workspaces w ON n.workspace_id = w.id
+             LEFT JOIN projects p ON n.project_id = p.id
+             WHERE n.created_by = ?`;
+  
+  const params = [userId];
+  
+  if (workspaceId !== undefined) {
+    // Filter by workspace_id - includes both direct workspace notes and notes from projects in workspace
+    sql += ' AND (n.workspace_id = ? OR p.workspace_id = ?)';
+    params.push(workspaceId, workspaceId);
+  }
+  
+  sql += ` ORDER BY n.created_at DESC LIMIT ${lim} OFFSET ${off}`;
+  
+  const [rows] = await pool.query(sql, sanitizeParams(params));
+  
+  let countSql = 'SELECT COUNT(*) AS total FROM notes n LEFT JOIN projects p ON n.project_id = p.id WHERE n.created_by = ?';
+  const countParams = [userId];
+  
+  if (workspaceId !== undefined) {
+    countSql += ' AND (n.workspace_id = ? OR p.workspace_id = ?)';
+    countParams.push(workspaceId, workspaceId);
+  }
+  
+  const [[{ total }]] = await pool.query(countSql, sanitizeParams(countParams));
   return { notes: rows, total };
 }
 

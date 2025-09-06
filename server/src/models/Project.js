@@ -13,7 +13,9 @@ export const getAllProjectsForUser = async (userId, workspaceId) => {
     sql += ' AND p.workspace_id = ?';
     params.push(workspaceId);
   }
-  sql += ' ORDER BY p.created_at DESC';
+  // Order by: general projects (workspace_id IS NULL) first, then workspace projects
+  // Within each group, order by most recent created_at first
+  sql += ' ORDER BY p.workspace_id IS NULL DESC, p.created_at DESC';
   const [rows] = await pool.execute(sql, sanitizeParams(params));
   return rows;
 };
@@ -78,7 +80,9 @@ export async function searchProjects({ userId, q, status, workspaceId }) {
     sql += ' AND status = ?';
     params.push(status);
   }
-  sql += ' ORDER BY created_at DESC';
+  // Order by: general projects (workspace_id IS NULL) first, then workspace projects
+  // Within each group, order by most recent created_at first
+  sql += ' ORDER BY workspace_id IS NULL DESC, created_at DESC';
   const [rows] = await pool.execute(sql, sanitizeParams(params));
   return rows;
 }
