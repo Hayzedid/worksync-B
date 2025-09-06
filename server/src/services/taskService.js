@@ -8,8 +8,8 @@ import {
   // ...other model functions
 } from '../models/Task.js';
 
-export async function getTasksService(userId, limit, offset) {
-  return getAllTasksByUser(userId, limit, offset);
+export async function getTasksService(userId, limit, offset, workspaceId) {
+  return getAllTasksByUser(userId, limit, offset, workspaceId);
 }
 
 export async function getSingleTaskService(taskId) {
@@ -23,7 +23,8 @@ export async function createTaskService(taskData) {
 export async function updateTaskService(taskId, updateData) {
   // updateData: { title, description, due_date, status }
   // Only pass defined fields
-  return updateTask(taskId, updateData);
+  const result = await updateTask(taskId, updateData);
+  return result;
 }
 
 export async function deleteTaskService(taskId) {

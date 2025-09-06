@@ -1,6 +1,7 @@
 // services/noteService.js
 import {
   getNotes,
+  getAllNotesForUser,
   getNoteById,
   createNote,
   updateNote,
@@ -9,7 +10,8 @@ import {
 } from '../models/Note.js';
 
 export async function getNotesService(params) {
-  return getNotes(params);
+  const { userId, limit, offset, workspaceId } = params;
+  return getAllNotesForUser(userId, limit, offset, workspaceId);
 }
 
 export async function getNoteService(noteId) {
