@@ -135,38 +135,27 @@ export const resetPassword = async (req, res, next) => {
 export const loginUser = async (req, res, next) => {
   const { email, password } = req.body;
 
-  // Debug: Log incoming request
-  console.log('--- LOGIN REQUEST ---');
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
   try {
     if (!email || !password) {
-      console.log('Missing email or password');
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
   const [users] = await pool.execute('SELECT * FROM users WHERE email = ?', sanitizeParams([email.toLowerCase()]));
-    console.log('User lookup result:', users);
     if (users.length === 0) {
-      console.log('No user found for email:', email);
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const user = users[0];
     const isPasswordValid = await verifyPassword(password, user.password_hash);
-    console.log('Password valid:', isPasswordValid);
     if (!isPasswordValid) {
-      console.log('Invalid password for user:', email);
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     if (!user.is_active) {
-      console.log('User is not active:', email);
       return res.status(401).json({ success: false, message: 'Account is deactivated. Please contact support.' });
     }
 
     const token = generateToken(user);
-    console.log('Generated token:', token);
     // Set cookie for frontend authentication
     const { NODE_ENV } = await import('../config/config.js');
     res.cookie('token', token, {
@@ -175,7 +164,6 @@ export const loginUser = async (req, res, next) => {
       sameSite: NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
-    console.log('Set cookie for token');
     res.status(200).json({
       success: true,
       message: 'Login successful',
