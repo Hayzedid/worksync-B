@@ -25,7 +25,6 @@ export async function updateProjectService(updateData) {
 }
 
 export async function deleteProjectService(projectId, userId) {
-  console.log('[deleteProjectService] Called with:', { projectId, userId });
   return deleteProjectById(projectId, userId);
 }
 // Add more as needed
