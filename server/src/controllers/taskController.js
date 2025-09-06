@@ -56,10 +56,14 @@ export async function getTasks(req, res, next) {
   try {
     const limitRaw = req.query.limit;
     const offsetRaw = req.query.offset;
+    const workspaceIdRaw = req.query.workspace_id;
+    
     const limit = Number.isFinite(parseInt(limitRaw, 10)) ? parseInt(limitRaw, 10) : 20;
     const offset = Number.isFinite(parseInt(offsetRaw, 10)) ? parseInt(offsetRaw, 10) : 0;
+    const workspaceId = Number.isFinite(parseInt(workspaceIdRaw, 10)) ? parseInt(workspaceIdRaw, 10) : undefined;
+    
     const userId = req.user.id;
-    const { tasks, total } = await getTasksService(userId, limit, offset);
+    const { tasks, total } = await getTasksService(userId, limit, offset, workspaceId);
     res.json({ success: true, tasks, total });
   } catch (error) {
     next(error);
@@ -95,8 +99,26 @@ export async function createNewTask(req, res, next) {
     } = req.body;
     const created_by = req.user.id;
     let normalizedStatus = status ? String(status).toLowerCase().replace(/-/g, '_') : 'todo';
-    if (!['todo', 'in_progress', 'done'].includes(normalizedStatus)) {
-      normalizedStatus = 'todo';
+    
+    // Validate status based on whether task belongs to a project
+    const isProjectTask = Boolean(project_id);
+    let allowedStatuses;
+    
+    if (isProjectTask) {
+      // Project tasks: all statuses allowed
+      allowedStatuses = new Set(['todo', 'in_progress', 'done', 'review', 'cancelled']);
+    } else {
+      // General tasks: only basic statuses
+      allowedStatuses = new Set(['todo', 'in_progress', 'done']);
+    }
+    
+    if (!allowedStatuses.has(normalizedStatus)) {
+      const taskType = isProjectTask ? 'project task' : 'general task';
+      const allowedStatusesList = Array.from(allowedStatuses).join(', ');
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid status '${normalizedStatus}' for ${taskType}. Allowed statuses: ${allowedStatusesList}` 
+      });
     }
     
     const taskData = {
@@ -125,19 +147,132 @@ export async function createNewTask(req, res, next) {
 
 export async function updateTaskById(req, res, next) {
   try {
-    const { title, description, due_date, status } = req.body;
+    const { 
+      title, 
+      description, 
+      due_date, 
+      status,
+      priority,
+      assigned_to,
+      project_id,
+      start_date,
+      completion_date,
+      estimated_hours,
+      actual_hours,
+      position
+    } = req.body;
+    
     const incomingStatus = req.body.status;
-    const allowedStatuses = new Set(['todo', 'in_progress', 'done']);
     let normalizedStatus = incomingStatus === undefined ? undefined : String(incomingStatus).toLowerCase().replace(/-/g, '_');
-    if (normalizedStatus !== undefined && !allowedStatuses.has(normalizedStatus)) {
-      normalizedStatus = 'todo';
-    }
+    
+    // Get current task to check if it belongs to a project
     const taskId = req.params.id;
-    const affectedRows = await updateTaskService(taskId, { title, description, due_date, status: normalizedStatus });
+    let currentTask = null;
+    if (normalizedStatus !== undefined) {
+      try {
+        // Import the task service to get current task info
+        const { getSingleTaskService } = await import('../services/taskService.js');
+        currentTask = await getSingleTaskService(taskId);
+        
+        if (currentTask) {
+          // Determine allowed statuses based on project association
+          const isProjectTask = currentTask.project_id || project_id;
+          let allowedStatuses;
+          
+          if (isProjectTask) {
+            // Project tasks: all statuses allowed
+            allowedStatuses = new Set(['todo', 'in_progress', 'done', 'review', 'cancelled']);
+          } else {
+            // General tasks: only basic statuses
+            allowedStatuses = new Set(['todo', 'in_progress', 'done']);
+          }
+          
+          if (!allowedStatuses.has(normalizedStatus)) {
+            const taskType = isProjectTask ? 'project task' : 'general task';
+            const allowedStatusesList = Array.from(allowedStatuses).join(', ');
+            return res.status(400).json({ 
+              success: false, 
+              message: `Invalid status '${normalizedStatus}' for ${taskType}. Allowed statuses: ${allowedStatusesList}` 
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error validating task status:', error);
+        return res.status(500).json({ success: false, message: 'Error validating task status' });
+      }
+    }
+    
+    // Build update data object with only the fields that were sent
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (due_date !== undefined) updateData.due_date = due_date;
+    if (normalizedStatus !== undefined) updateData.status = normalizedStatus;
+    if (priority !== undefined) updateData.priority = priority;
+    if (assigned_to !== undefined) updateData.assigned_to = assigned_to;
+    if (project_id !== undefined) updateData.project_id = project_id;
+    if (start_date !== undefined) updateData.start_date = start_date;
+    if (completion_date !== undefined) updateData.completion_date = completion_date;
+    if (estimated_hours !== undefined) updateData.estimated_hours = estimated_hours;
+    if (actual_hours !== undefined) updateData.actual_hours = actual_hours;
+    if (position !== undefined) updateData.position = position;
+    
+    const affectedRows = await updateTaskService(taskId, updateData);
+    
     if (!affectedRows) return res.status(404).json({ success: false, message: 'Task not found' });
     return res.json({ success: true, message: 'Task updated' });
   } catch (error) {
+    console.error('❌ Task update error:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+}
+
+export async function getTaskStatusOptions(req, res, next) {
+  try {
+    const { project_id, task_id } = req.query;
+    
+    let isProjectTask = false;
+    
+    if (task_id) {
+      // Get existing task to check if it belongs to a project
+      const { getSingleTaskService } = await import('../services/taskService.js');
+      const task = await getSingleTaskService(task_id);
+      if (task) {
+        isProjectTask = Boolean(task.project_id);
+      }
+    } else if (project_id) {
+      // New task with project association
+      isProjectTask = Boolean(project_id);
+    }
+    
+    let statusOptions;
+    
+    if (isProjectTask) {
+      // Project tasks: all statuses available
+      statusOptions = [
+        { value: 'todo', label: 'To Do', description: 'Task is ready to be started' },
+        { value: 'in_progress', label: 'In Progress', description: 'Task is currently being worked on' },
+        { value: 'done', label: 'Done', description: 'Task is completed' },
+        { value: 'review', label: 'Review', description: 'Task needs to be reviewed' },
+        { value: 'cancelled', label: 'Cancelled', description: 'Task has been cancelled' }
+      ];
+    } else {
+      // General tasks: only basic statuses
+      statusOptions = [
+        { value: 'todo', label: 'To Do', description: 'Task is ready to be started' },
+        { value: 'in_progress', label: 'In Progress', description: 'Task is currently being worked on' },
+        { value: 'done', label: 'Done', description: 'Task is completed' }
+      ];
+    }
+    
+    res.json({ 
+      success: true, 
+      taskType: isProjectTask ? 'project' : 'general',
+      statusOptions 
+    });
+  } catch (error) {
+    next(error);
   }
 }
 
