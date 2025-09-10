@@ -1,10 +1,12 @@
 # WorkSync Backend API
 
+[![CI](https://github.com/Hayzedid/worksync-B/actions/workflows/ci.yml/badge.svg)](https://github.com/Hayzedid/worksync-B/actions/workflows/ci.yml)
+
 This is the backend API for the WorkSync project management application.
 
 ## Prerequisites
 
-- Node.js v14 or higher
+- Node.js v18 or higher
 - MySQL database server
 
 ## Setup
