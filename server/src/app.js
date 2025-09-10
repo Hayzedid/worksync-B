@@ -1,6 +1,27 @@
 
 import healthRoutes from './routes/health.js';
+// Import production security middleware
+import { 
+  rateLimiters, 
+  securityHeaders, 
+  securityLogger, 
+  trackSuspiciousActivity,
+  corsOptions 
+} from './middleware/security.js';
+import cors from 'cors';
+import { logger, requestLogger } from './utils/logger.js';
+
 const app = express();
+
+// Production security headers (must be first)
+app.use(securityHeaders);
+
+// Request logging for monitoring
+app.use(requestLogger);
+
+// Suspicious activity tracking
+app.use(trackSuspiciousActivity);
+
 // Register health check route before any other middleware or route
 app.use('/api/health', healthRoutes);
 
@@ -46,43 +67,37 @@ import helmet from 'helmet';
 // import socketHandler from './socket/socketHandler.js';
 // ...existing code...
 
-// Security: Set secure HTTP headers
-// 1. Helmet for HTTP headers
+// Security: Set secure HTTP headers with production CORS
 app.use(helmet());
-// 2. CORS (must be first for preflight)
-// 3. Rate limiting (generalLimiter is global, authLimiter is for /api/auth)
-// 4. Input validation and sanitization is handled in controllers/routes
-// 5. Cookie parser and dev logger
-// 6. All sensitive routes require authentication and RBAC as needed
-// app.use(xss()); // Disabled due to incompatibility with recent Express
-// const PORT = process.env.PORT || 5000;
 
-// import http from 'http';
-// import { Server } from 'socket.io';
+// Production CORS configuration
+app.use(cors(corsOptions));
 
-// Ensure CORS is the very first middleware
-app.use(mycors); // CORS must be first
+// Remove the old CORS middleware
+// app.use(mycors); // Replaced with production CORS
 // Preflight will be handled by the global CORS middleware above
 
 app.use(json({ limit: '10mb' }));
 app.use(urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
-app.use(devLogger); 
-app.use(generalLimiter); // Apply globally
 
-// Routes
+// Replace dev logger with production request logger
+// app.use(devLogger); // Removed - using production logger
+app.use(rateLimiters.general); // Production rate limiting
+
+// Routes with enhanced security
 const minimalRoutes = process.env.MINIMAL_ROUTES === '1';
 
 if (minimalRoutes) {
   // Only auth routes for isolation
   if (process.env.NODE_ENV !== 'test') {
-    app.use('/api/auth', authLimiter, authRoutes);
+    app.use('/api/auth', rateLimiters.auth, authRoutes);
   } else {
     app.use('/api/auth', authRoutes);
   }
 } else {
   if (process.env.NODE_ENV !== 'test') {
-    app.use('/api/auth', authLimiter, authRoutes); // Stricter limit for login/signup
+    app.use('/api/auth', rateLimiters.auth, authRoutes); // Enhanced auth rate limiting
   } else {
     app.use('/api/auth', authRoutes);
   }
@@ -98,10 +113,10 @@ if (minimalRoutes) {
   app.use('/api/notifications', authenticateToken, notificationRoutes);
   app.use('/api/activity', authenticateToken, activityRoutes);
   app.use('/api/calendar', authenticateToken, calendarRoutes);
-  app.use('/api/attachments', authenticateToken, attachmentRoutes);
+  app.use('/api/attachments', authenticateToken, rateLimiters.fileUpload, attachmentRoutes);
   // Phase 2 Collaboration Routes
-  app.use('/api/presence', authenticateToken, presenceRoutes);
-  app.use('/api/collaboration', authenticateToken, collaborationRoutes);
+  app.use('/api/presence', authenticateToken, rateLimiters.realtime, presenceRoutes);
+  app.use('/api/collaboration', authenticateToken, rateLimiters.realtime, collaborationRoutes);
 }
 
 

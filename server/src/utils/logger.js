@@ -1,7 +1,16 @@
 /**
- * Centralized logging utility for WorkSync
- * Replaces scattered console.log statements with structured logging
+ * Production-ready logging utility for WorkSync
+ * Enhanced with performance monitoring, security logging, and file output
  */
+
+const fs = require('fs');
+const path = require('path');
+
+// Ensure logs directory exists
+const logsDir = path.join(__dirname, '../../logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
 
 const LOG_LEVELS = {
   DEBUG: 0,
