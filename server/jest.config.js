@@ -8,4 +8,19 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   verbose: true,
+  collectCoverage: false, // Can be enabled with --coverage flag
+  collectCoverageFrom: [
+    'src/**/*.js',
+    '!src/**/*.test.js',
+    '!src/**/test/**',
+    '!src/config/setupDatabase.js',
+    '!src/config/initDatabase.js'
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
+  testMatch: [
+    '**/test/**/*.test.js',
+    '**/?(*.)+(spec|test).js'
+  ],
+  setupFiles: ['<rootDir>/test/setup.js']
 };
