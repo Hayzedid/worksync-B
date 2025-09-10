@@ -47,7 +47,7 @@ jobs:
           echo "DB_USER=root" >> .env
           echo "DB_PASSWORD=root" >> .env
           echo "DB_NAME=worksync" >> .env
-          echo "JWT_SECRET=test-secret-key-for-ci" >> .env
+          echo "JWT_SECRET=ci-test-secret-$(date +%s)" >> .env
           echo "NODE_ENV=test" >> .env
           echo "PORT=4100" >> .env
       - name: Init DB
