@@ -27,19 +27,6 @@ jobs:
           node-version: 18
           cache: 'npm'
           cache-dependency-path: server/package-lock.json
-      - name: Install dependencies
-        working-directory: ./server
-        run: npm ci
-      - name: Wait for MySQL
-        run: |
-          for i in {1..30}; do
-            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
-              echo "MySQL is ready!"
-              break
-            fi
-            echo "Waiting for MySQL..."
-            sleep 2
-          done
       - name: Setup Environment
         working-directory: ./server
         run: |
@@ -50,9 +37,30 @@ jobs:
           echo "JWT_SECRET=ci-test-secret-$(date +%s)" >> .env
           echo "NODE_ENV=test" >> .env
           echo "PORT=4100" >> .env
+          echo "Environment variables set:"
+          cat .env
+      - name: Install dependencies
+        working-directory: ./server
+        run: npm ci
+      - name: Wait for MySQL
+        run: |
+          echo "Waiting for MySQL to be ready..."
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+              echo "MySQL is ready!"
+              break
+            fi
+            echo "Attempt $i: Waiting for MySQL..."
+            sleep 2
+          done
+          echo "Verifying MySQL connection:"
+          mysql -h 127.0.0.1 -uroot -proot -e "SELECT 1"
       - name: Init DB
         working-directory: ./server
-        run: npm run init-db
+        run: |
+          echo "Starting database initialization..."
+          npm run init-db
+          echo "Database initialization completed"
       - name: Run tests
         working-directory: ./server
         run: npm test
