@@ -20,24 +20,42 @@ jobs:
         options: >-
           --health-cmd="mysqladmin ping --silent" --health-interval=10s --health-timeout=5s --health-retries=5
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
       - name: Install dependencies
-        run: npm install --prefix worksync/server
+        working-directory: ./server
+        run: npm ci
       - name: Wait for MySQL
         run: |
           for i in {1..30}; do
             if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+              echo "MySQL is ready!"
               break
             fi
+            echo "Waiting for MySQL..."
             sleep 2
           done
+      - name: Setup Environment
+        working-directory: ./server
+        run: |
+          echo "DB_HOST=127.0.0.1" > .env
+          echo "DB_USER=root" >> .env
+          echo "DB_PASSWORD=root" >> .env
+          echo "DB_NAME=worksync" >> .env
+          echo "JWT_SECRET=test-secret-key-for-ci" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "PORT=4100" >> .env
       - name: Init DB
-        run: npm run init-db --prefix worksync/server
+        working-directory: ./server
+        run: npm run init-db
       - name: Run tests
-        run: npm test --prefix worksync/server
-      - name: Report coverage
-        run: npm run coverage --prefix worksync/server || true
+        working-directory: ./server
+        run: npm test
+      - name: Generate coverage report
+        working-directory: ./server
+        run: npm test -- --coverage || true
