@@ -1,0 +1,143 @@
+WORKSYNC — SOFTWARE REPORT
+
+Azeez Idris Oluwasegun
+CSC 392
+220591104
+Supervisor: DR. Adenowo
+September 2025
+
+IN PARTIAL FULFILMENT OF THE REQUIREMENTS FOR THE AWARD OF BACHELOR OF SCIENCE IN COMPUTER SCIENCE
+
+TABLE OF CONTENTS
+Chapter 1: Introduction
+Chapter 2: System Overview
+Chapter 3: Installation & Setup
+Chapter 4: User Guide
+Chapter 5: Maintenance & Deployment
+Appendix: Essential Commands (PowerShell)
+
+CHAPTER 1: INTRODUCTION
+
+Purpose
+This report explains what WorkSync is, why it was built, and how someone can set it up and use it. It is written for non-technical readers: classmates, supervisors, and anyone who needs a clear overview.
+
+Scope
+The document covers the application’s goals, what it does for users, how to get it running at a high level, how to use the main features, and basic maintenance and safety guidance.
+
+Intended audience
+Students, non-technical supervisors, demonstrators, and anyone who needs a straightforward description of the project and simple steps to get started.
+
+Document conventions
+This report uses everyday language. Technical terms are either avoided or briefly explained. Filenames or small commands are shown plainly for reference.
+
+CHAPTER 2: SYSTEM OVERVIEW
+
+What WorkSync is (plain)
+WorkSync is a web application that helps people post job or task listings, look for work, and manage those listings. It supports simple collaboration so team members can see updates quickly.
+
+Main parts of the system (simple terms)
+- Frontend (the website): The part users see and interact with — forms, lists, buttons, dashboards.
+- Backend (the server): The part that stores data and makes sure the app behaves correctly.
+- Database: The secure store where accounts, listings, and applications are saved.
+
+Key features (user-facing)
+- Create an account and log in.
+- Post job/task listings with title, description and contact details.
+- View listings and apply for jobs.
+- Edit or delete listings you created.
+- See live updates when other users make changes (where enabled).
+
+Why these parts matter
+- The website (frontend) gives a friendly way to use the app.
+- The backend keeps data safe and enforces rules (for example, only the owner can delete a listing).
+- The database keeps information persistent so listings and user accounts remain available between sessions.
+
+CHAPTER 3: INSTALLATION & SETUPm
+
+What you need (high level)
+- A computer with basic developer tools (the project’s setup guide lists specific tools).
+- Access to a database service (can be local or hosted).
+- The project files (downloaded from the project repository).
+
+Simple setup steps (non-technical)
+1. Download the project files from the repository.
+2. Run the project’s setup routine to fetch the required tools and libraries. This step prepares everything the app needs.
+3. Create a small settings file that tells the app where the database is and a secret key for security. This file is kept private and is not shared with others.
+4. Initialize the database so it contains the tables and starter data the app uses.
+5. Start the backend server and the frontend website. Open the website in a browser to try the app.
+
+What the configuration does (briefly)
+- The configuration file stores a handful of values such as the database address and a secret key. These settings tell the application where to save data and how to protect user sessions.
+
+Starting the app (what to expect)
+- Once started, open the local web address shown by the frontend (for example, a localhost address) to see and use WorkSync. You can then register an account, post listings, and interact with the app.
+
+CHAPTER 4: USER GUIDE
+
+Creating an account
+- Access the registration page, enter your name, email and password, then submit. After registration you can log in.
+
+Posting a job or task
+- After logging in, use the “Post Job” (or “New Task”) option. Enter the title, description and contact details, then submit. Your post will appear in the listings.
+
+Viewing and managing listings
+- The main dashboard lists available jobs. From your “My Listings” page you can edit or remove the items you posted.
+
+Applying for a job
+- On any listing, click “Apply” to send your interest or contact details to the poster. The poster can view applicants and respond through the provided contact methods.
+
+Collaboration and updates
+- The app shows recent changes so team members see updates quickly. This helps keep everyone in sync without manual refreshes.
+
+CHAPTER 5: MAINTENANCE & DEPLOYMENT
+
+Developer and deployment overview (simple)
+- Developers run the app locally to test and work on features. The project also has a setup for automatic checks that run whenever changes are made so that mistakes are caught early.
+
+Testing (non-technical)
+- The app includes automated checks that confirm the main features work. These checks are helpful before sharing the app with others or deploying it for demonstrations.
+
+Security basics (plain)
+- Keep secret keys and passwords out of the project files that are shared publicly.
+- Use secure connections if the app is hosted online so user data is protected.
+- Change secrets immediately if they are accidentally exposed.
+
+Backups and monitoring (brief)
+- Make regular backups of the database so data is not lost.
+- Watch for error messages and logs while the app runs so problems can be fixed quickly.
+
+Troubleshooting (simple steps)
+- If the website does not load: check that the database and server are running.
+- If a feature behaves strangely: restart the server and follow any error messages.
+- If private data was exposed: change passwords/secrets and remove the data from public history if needed.
+
+APPENDIX: ESSENTIAL COMMANDS (PowerShell)
+
+Clone and open project folder
+
+git clone https://github.com/Hayzedid/worksync-B.git "C:\Users\USER\Documents\Work sync\worksync"
+cd "C:\Users\USER\Documents\Work sync\worksync"
+
+Install backend tools and initialize database
+
+cd server
+npm ci
+npm run init-db
+
+Start backend
+
+npm start
+
+Start frontend (in separate shell)
+
+cd ..\Front\client
+npm ci
+npm run dev
+
+Run backend tests
+
+cd "C:\Users\USER\Documents\Work sync\worksync\server"
+npm test
+
+FINAL NOTE
+This file uses simple language and exactly five chapters as requested. If you want this saved into the repository as a different filename, or committed into git, tell me and I will proceed.
