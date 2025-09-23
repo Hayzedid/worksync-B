@@ -1,4 +1,11 @@
 {
+  "name": "worksync-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "cd server && npm start",
+    "dev": "cd server && npm run dev",
+    "install-deps": "cd server && npm install"
+  },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
