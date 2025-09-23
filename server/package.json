@@ -4,10 +4,12 @@
   "main": "index.js",
   "scripts": {
     "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "setup-db": "node src/config/setupDatabase.js",
     "init-db": "node src/config/initDatabase.js",
     "test-db": "node src/config/testDatabase.js",
-    "test": "jest"
+    "test": "set NODE_ENV=test && jest --config jest.config.cjs",
+    "build": "echo 'No build needed for Node.js server'"
   },
   "type": "module",
   "keywords": [],

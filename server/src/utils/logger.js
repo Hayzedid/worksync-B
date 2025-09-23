@@ -3,8 +3,13 @@
  * Enhanced with performance monitoring, security logging, and file output
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent in ES6 modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Ensure logs directory exists
 const logsDir = path.join(__dirname, '../../logs');
@@ -106,4 +111,4 @@ class Logger {
 // Create singleton instance
 const logger = new Logger();
 
-module.exports = logger;
+export default logger;

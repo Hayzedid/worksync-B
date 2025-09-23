@@ -13,11 +13,8 @@ RUN npm install
 # Copy the rest of your backend code
 COPY . .
 
-# Expose the port your app runs on (default 5000)
-EXPOSE 5000
-
-# Add a Dockerfile step to debug
-RUN cat .env || echo "No .env file found"
+# Expose the port (Railway will set PORT environment variable)
+EXPOSE ${PORT:-5000}
 
 # Start the server
 CMD ["npm", "start"] 
