@@ -1,0 +1,88 @@
+// models/projectModel.js
+import { pool } from '../config/database.js';
+import { sanitizeParams } from '../utils/sql.js';
+
+export const getAllProjectsForUser = async (userId, workspaceId) => {
+  let sql = `
+    SELECT p.*, w.id AS workspace_join_id, w.name AS workspace_name
+    FROM projects p
+    LEFT JOIN workspaces w ON p.workspace_id = w.id
+    WHERE p.owner_id = ?`;
+  const params = [userId];
+  if (workspaceId) {
+    sql += ' AND p.workspace_id = ?';
+    params.push(workspaceId);
+  }
+  // Order by: general projects (workspace_id IS NULL) first, then workspace projects
+  // Within each group, order by most recent created_at first
+  sql += ' ORDER BY p.workspace_id IS NULL DESC, p.created_at DESC';
+  const [rows] = await pool.execute(sql, sanitizeParams(params));
+  return rows;
+};
+
+export const getProjectById = async (projectId, userId) => {
+  const [rows] = await pool.execute(
+    `SELECT p.*, w.id AS workspace_join_id, w.name AS workspace_name
+     FROM projects p
+     LEFT JOIN workspaces w ON p.workspace_id = w.id
+     WHERE p.id = ? AND p.owner_id = ?`,
+  sanitizeParams([projectId, userId])
+  );
+  return rows[0];
+};
+
+export const createNewProject = async ({ userId, name, description, status, workspace_id = null }) => {
+  const [result] = await pool.execute(
+    'INSERT INTO projects (owner_id, name, description, status, workspace_id) VALUES (?, ?, ?, ?, ?)',
+  sanitizeParams([userId, name, description || '', status || 'active', workspace_id])
+  );
+  return result.insertId;
+};
+
+export const updateProjectById = async ({ id, userId, name, description, status, workspace_id }) => {
+  console.log('Status to update:', status);
+  const [result] = await pool.execute(
+    'UPDATE projects SET name = ?, description = ?, status = ?, workspace_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND owner_id = ?',
+  sanitizeParams([name, description, status, workspace_id, id, userId])
+  );
+  return result.affectedRows;
+};
+
+export const deleteProjectById = async (id, userId) => {
+  // Enhanced debug logging
+  console.log('[deleteProjectById] Params:', { projectId: id, userId, typeofProjectId: typeof id, typeofUserId: typeof userId });
+
+  // Final fallback: forcibly convert undefined/NaN to null
+  const safeId = (id === undefined || isNaN(id)) ? null : id;
+  const safeUserId = (userId === undefined || isNaN(userId)) ? null : userId;
+  console.log('[deleteProjectById] Final SQL params:', [safeId, safeUserId]);
+  console.log('[deleteProjectById] About to execute SQL DELETE with:', [safeId, safeUserId]);
+
+  const [result] = await pool.execute(
+    'DELETE FROM projects WHERE id = ? AND owner_id = ?',
+    sanitizeParams([safeId, safeUserId])
+  );
+  return result.affectedRows;
+};
+
+export async function searchProjects({ userId, q, status, workspaceId }) {
+  let sql = `SELECT * FROM projects WHERE owner_id = ?`;
+  const params = [userId];
+  if (workspaceId) {
+    sql += ' AND workspace_id = ?';
+    params.push(workspaceId);
+  }
+  if (q) {
+    sql += ' AND MATCH(name, description) AGAINST (? IN NATURAL LANGUAGE MODE)';
+    params.push(q);
+  }
+  if (status) {
+    sql += ' AND status = ?';
+    params.push(status);
+  }
+  // Order by: general projects (workspace_id IS NULL) first, then workspace projects
+  // Within each group, order by most recent created_at first
+  sql += ' ORDER BY workspace_id IS NULL DESC, created_at DESC';
+  const [rows] = await pool.execute(sql, sanitizeParams(params));
+  return rows;
+}
