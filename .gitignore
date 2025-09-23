@@ -1,48 +1,30 @@
-# Dependencies
+# Node modules
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-
-# Environment files
-.env
-.env.local
-.env.production
-.env.development
-*.env
 
 # Logs
 logs/
 *.log
-server/server.log
-server/debug.log
-server/server-debug*.log
+npm-debug.log*
 
-# Uploads directory
-uploads/
+# Environment variables
+.env
+.env.local
+.env.*.local
 
-# Test files
-test-*.js
-check-*.js
-
-# IDE/Editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS generated files
+# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Temporary files
-tmp/
-temp/
-*.tmp
-*.temp
+# VS Code settings
+.vscode/
+
+# Build output
+dist/
+build/
+
+# Database files (if any)
+*.sqlite
+*.db
+
+# Misc
+coverage/
