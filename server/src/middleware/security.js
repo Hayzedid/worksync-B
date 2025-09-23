@@ -1,5 +1,5 @@
-const rateLimit = require('express-rate-limit');
-const slowDown = require('express-slow-down');
+import rateLimit from 'express-rate-limit';
+import slowDown from 'express-slow-down';
 
 // General rate limiter for all API requests
 const createRateLimit = (windowMs, max, message) => {
@@ -66,7 +66,7 @@ const speedLimiters = {
   heavy: slowDown({
     windowMs: 15 * 60 * 1000, // 15 minutes
     delayAfter: 10, // allow 10 requests per window without delay
-    delayMs: 500, // add 500ms delay per request after delayAfter
+    delayMs: () => 500, // add 500ms delay per request after delayAfter (v2 format)
     maxDelayMs: 20000, // maximum delay of 20 seconds
   })
 };
@@ -200,7 +200,7 @@ const corsOptions = {
   optionsSuccessStatus: 200 // For legacy browser support
 };
 
-module.exports = {
+export {
   rateLimiters,
   speedLimiters,
   trackSuspiciousActivity,
