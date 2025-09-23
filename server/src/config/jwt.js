@@ -1,0 +1,20 @@
+
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from './config.js';
+
+export const generateToken = (user) => {
+  const payload = {
+    id: user.id,
+    email: user.email
+  };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' }); // Extended to 24 hours
+};
+
+export const verifyToken = (token) => {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (error) {
+    console.error('Token verification error:', error);
+    throw new Error('Invalid token');
+  }
+};
