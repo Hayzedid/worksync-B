@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { testConnection } from './config/database.js';
 import socketHandler from './socket/socketHandler.js';
 import YjsWebSocketServer from './socket/yjsServer.js';
+import { setSocketIOInstance } from './utils/socketUtils.js';
 
 import * as config from './config/config.js';
 // Use a random port during tests to avoid EADDRINUSE
@@ -34,6 +35,9 @@ async function startServer() {
         credentials: true
       }
     });
+    
+    // Set the Socket.IO instance for use in other modules
+    setSocketIOInstance(io);
     
     socketHandler(io);
     
@@ -68,8 +72,8 @@ async function startServer() {
       });
     });
     
-    // Start recurring job logic
-    import('./services/recurringJob.js');
+    // Start recurring job logic (temporarily disabled for debugging)
+    // import('./services/recurringJob.js');
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

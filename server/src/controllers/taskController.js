@@ -49,7 +49,7 @@ import {
     setCachedSearchTasks
 } from '../models/Task.js';
 import { getUserById } from '../models/User.js';
-import { io } from '../server.js';
+import { emitToUser } from '../utils/socketUtils.js';
 import { sendEmail } from '../services/emailServices.js';
 
 export async function getTasks(req, res, next) {
@@ -300,7 +300,7 @@ export async function assignTask(req, res, next) {
     // Fetch the assigned user's email (implement as needed)
     const assignedUser = await getUserById(userId); // implement getUserById in User model
     // Emit real-time event
-    io.to(userId.toString()).emit('notification', { type: 'taskAssigned', task });
+    emitToUser(userId, 'notification', { type: 'taskAssigned', task });
     // Send email notification
     await sendEmail(assignedUser.email, 'You have been assigned a new task', `Task: ${task.title}`);
     res.status(200).json({ message: 'Task assigned and user notified', task });

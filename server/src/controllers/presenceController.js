@@ -1,6 +1,6 @@
 // Phase 2 Presence API Controller
 import { pool } from '../config/database.js';
-import { getWorkspacePresence } from '../socket/socketHandler.js';
+import { getWorkspacePresence } from '../utils/socketUtils.js';
 
 // Get workspace presence
 export const getWorkspacePresenceController = async (req, res) => {
