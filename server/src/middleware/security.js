@@ -194,13 +194,17 @@ const corsOptions = {
           'http://localhost:3000', 
           'https://worksync-app.vercel.app',
           'https://worksync-c.vercel.app',
+          'https://worksync-b.onrender.com',
           frontendUrl
         ];
     
     // Remove duplicates and filter out empty strings
     const uniqueOrigins = [...new Set(allowedOrigins.filter(url => url && url.trim()))];
     
+    console.log(`CORS: Checking origin ${origin} against allowed origins:`, uniqueOrigins);
+    
     if (uniqueOrigins.indexOf(origin) !== -1) {
+      console.log(`CORS: Allowing origin ${origin}`);
       callback(null, true);
     } else {
       console.log(`CORS: Blocked origin ${origin}. Allowed origins:`, uniqueOrigins);
