@@ -47,7 +47,14 @@ import collaborationRoutes from './routes/collaboration.js';
 const app = express();
 
 // Trust proxy for Render deployment (required for rate limiting and real IP detection)
-app.set('trust proxy', true);
+// Configure for Render's reverse proxy setup - be more specific to avoid rate limiter conflicts
+if (process.env.NODE_ENV === 'production') {
+  // In production (Render), trust the first proxy
+  app.set('trust proxy', 1);
+} else {
+  // In development, trust local proxies
+  app.set('trust proxy', ['127.0.0.1', 'loopback', 'linklocal', 'uniquelocal']);
+}
 
 // Production CORS configuration (must be very early)
 app.use(cors(corsOptions));
@@ -85,7 +92,23 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url} from origin: ${origin}`);
   console.log('Request headers:', JSON.stringify(req.headers, null, 2));
   console.log('Query params:', req.query);
-  console.log('Body preview:', req.method === 'POST' ? JSON.stringify(req.body).substring(0, 200) : 'N/A');
+  
+  // Safe body preview - handle undefined req.body
+  let bodyPreview = 'N/A';
+  if (req.method === 'POST' && req.body !== undefined) {
+    try {
+      const bodyStr = JSON.stringify(req.body);
+      // Fix: Check if bodyStr is defined before calling substring
+      if (bodyStr && typeof bodyStr === 'string') {
+        bodyPreview = bodyStr.length > 200 ? bodyStr.substring(0, 200) + '...' : bodyStr;
+      } else {
+        bodyPreview = '[Empty or invalid body]';
+      }
+    } catch (e) {
+      bodyPreview = '[Body parsing error]';
+    }
+  }
+  console.log('Body preview:', bodyPreview);
   
   // Set CORS headers explicitly for all requests
   if (origin) {
