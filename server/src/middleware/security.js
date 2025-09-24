@@ -185,19 +185,41 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
+    // Get allowed origins from environment variables or use defaults
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
       ? process.env.ALLOWED_ORIGINS.split(',')
-      : ['http://localhost:3100', 'http://localhost:3000', 'https://worksync-app.vercel.app'];
+      : [
+          'http://localhost:3100', 
+          'http://localhost:3000', 
+          'https://worksync-app.vercel.app',
+          'https://worksync-c.vercel.app',
+          frontendUrl
+        ];
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Remove duplicates and filter out empty strings
+    const uniqueOrigins = [...new Set(allowedOrigins.filter(url => url && url.trim()))];
+    
+    if (uniqueOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log(`CORS: Blocked origin ${origin}`);
+      console.log(`CORS: Blocked origin ${origin}. Allowed origins:`, uniqueOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  optionsSuccessStatus: 200 // For legacy browser support
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'Accept',
+    'X-Requested-With',
+    'X-Workspace-Id',
+    'Cache-Control'
+  ],
+  exposedHeaders: ['X-Total-Count'],
+  optionsSuccessStatus: 200, // For legacy browser support
+  preflightContinue: false
 };
 
 export {
