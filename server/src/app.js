@@ -46,6 +46,9 @@ import collaborationRoutes from './routes/collaboration.js';
 
 const app = express();
 
+// Trust proxy for Render deployment (required for rate limiting and real IP detection)
+app.set('trust proxy', true);
+
 // Production security headers (must be first)
 app.use(securityHeaders);
 
