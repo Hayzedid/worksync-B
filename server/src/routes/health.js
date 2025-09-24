@@ -17,7 +17,19 @@ router.get('/', async (req, res) => {
   try {
     // Simple DB check
     await pool.query('SELECT 1');
-    res.json({ ok: true, environment: NODE_ENV, timestamp: new Date().toISOString(), db: 'ok', uptime: process.uptime() });
+    res.json({ 
+      ok: true, 
+      environment: NODE_ENV, 
+      timestamp: new Date().toISOString(), 
+      db: 'ok', 
+      uptime: process.uptime(),
+      corsHeaders: {
+        origin: req.headers.origin,
+        allowOrigin: res.getHeader('Access-Control-Allow-Origin'),
+        allowCredentials: res.getHeader('Access-Control-Allow-Credentials'),
+        allowMethods: res.getHeader('Access-Control-Allow-Methods')
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, status: 'error', message: err.message });
   }
