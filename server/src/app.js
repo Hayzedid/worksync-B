@@ -83,6 +83,9 @@ app.use((req, res, next) => {
   
   // Log all requests for debugging
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url} from origin: ${origin}`);
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Query params:', req.query);
+  console.log('Body preview:', req.method === 'POST' ? JSON.stringify(req.body).substring(0, 200) : 'N/A');
   
   // Set CORS headers explicitly for all requests
   if (origin) {
@@ -145,6 +148,11 @@ if (minimalRoutes) {
   app.use('/api/presence', authenticateToken, rateLimiters.realtime, presenceRoutes);
   app.use('/api/collaboration', authenticateToken, rateLimiters.realtime, collaborationRoutes);
 }
+
+// Handle legacy /auth routes by mounting the same router
+app.use('/auth', authRoutes);
+
+// 404 handler will be handled by Express default
 
 // Error handler should be the last middleware
 app.use(errorHandler);
