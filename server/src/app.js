@@ -74,8 +74,7 @@ app.use(helmet());
 // Production CORS configuration
 app.use(cors(corsOptions));
 
-// Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
+// CORS middleware handles preflight requests automatically, no need for explicit options handler
 
 app.use(json({ limit: '10mb' }));
 app.use(urlencoded({ extended: true, limit: '10mb' }));
