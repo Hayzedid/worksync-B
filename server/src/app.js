@@ -49,7 +49,10 @@ const app = express();
 // Trust proxy for Render deployment (required for rate limiting and real IP detection)
 app.set('trust proxy', true);
 
-// Production security headers (must be first)
+// Production CORS configuration (must be very early)
+app.use(cors(corsOptions));
+
+// Production security headers
 app.use(securityHeaders);
 
 // Request logging for monitoring
@@ -57,9 +60,6 @@ app.use(requestLogger);
 
 // Suspicious activity tracking
 app.use(trackSuspiciousActivity);
-
-// Register health check route before any other middleware or route
-app.use('/api/health', healthRoutes);
 
 // Enforce HTTPS in production
 if (NODE_ENV === 'production') {
@@ -71,11 +71,39 @@ if (NODE_ENV === 'production') {
   });
 }
 
-// Security: Set secure HTTP headers with production CORS
+// Security: Set secure HTTP headers
 app.use(helmet());
 
-// Production CORS configuration
-app.use(cors(corsOptions));
+// Register health check route after CORS is configured
+app.use('/api/health', healthRoutes);
+
+// Additional explicit CORS handler for preflight requests
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Log all requests for debugging
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url} from origin: ${origin}`);
+  
+  // Set CORS headers explicitly for all requests
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', 'https://worksync-app.vercel.app');
+  }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, X-Workspace-Id, Cache-Control');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS preflight request from:', origin);
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
 app.use(json({ limit: '10mb' }));
 app.use(urlencoded({ extended: true, limit: '10mb' }));
