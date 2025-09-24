@@ -29,7 +29,7 @@ async function startServer() {
     const server = http.createServer(app);
     io = new Server(server, {
       cors: {
-  origin: config.FRONTEND_URL,
+        origin: config.FRONTEND_URL,
         methods: ['GET', 'POST'],
         credentials: true
       }

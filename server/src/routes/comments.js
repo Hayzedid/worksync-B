@@ -27,8 +27,7 @@ router.put('/:id', updateComment); // PUT /api/comments/:id
 router.delete('/:id', deleteComment); // DELETE /api/comments/:id
 router.post('/:id/reactions', toggleCommentReaction); // POST /api/comments/:id/reactions
 
-// Legacy routes for backward compatibility
-router.post('/comments', validateComment, validateRequest, addComment);
+// Legacy routes for backward compatibility  
 router.post('/:type/:id/comments', validateComment, validateRequest, addComment);
 router.get('/:type/:id/comments', fetchComments);
 
