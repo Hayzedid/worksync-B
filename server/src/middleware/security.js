@@ -12,6 +12,19 @@ const createRateLimit = (windowMs, max, message) => {
     },
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    // Don't override trust proxy - let the main app handle it
+    // trustProxy setting will be inherited from the main Express app
+    // Custom key generator that works with Render's proxy setup
+    keyGenerator: (req) => {
+      // Use the true client IP from X-Forwarded-For header
+      const forwardedFor = req.headers['x-forwarded-for'];
+      if (forwardedFor) {
+        // Take the first IP from the comma-separated list (original client IP)
+        return forwardedFor.split(',')[0].trim();
+      }
+      // Fallback to req.ip (should work with trust proxy)
+      return req.ip || req.connection.remoteAddress || 'unknown';
+    },
     handler: (req, res) => {
       res.status(429).json({
         success: false,
