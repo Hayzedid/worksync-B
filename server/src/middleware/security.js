@@ -186,7 +186,7 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     // Get allowed origins from environment variables or use defaults
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://worksync-app.vercel.app';
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
       ? process.env.ALLOWED_ORIGINS.split(',')
       : [
