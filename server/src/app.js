@@ -74,6 +74,9 @@ app.use(helmet());
 // Production CORS configuration
 app.use(cors(corsOptions));
 
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
 app.use(json({ limit: '10mb' }));
 app.use(urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
