@@ -211,17 +211,20 @@ const corsOptions = {
           frontendUrl
         ];
     
-    // Remove duplicates and filter out empty strings
-    const uniqueOrigins = [...new Set(allowedOrigins.filter(url => url && url.trim()))];
+    // Remove duplicates, filter out empty strings, and normalize trailing slashes
+    const uniqueOrigins = [...new Set(allowedOrigins.filter(url => url && url.trim()).map(url => url.replace(/\/$/, '')))];
     
-    console.log(`CORS: Checking origin ${origin} against allowed origins:`, uniqueOrigins);
+    // Normalize the incoming origin for comparison
+    const normalizedOrigin = origin.replace(/\/$/, '');
     
-    if (uniqueOrigins.indexOf(origin) !== -1) {
-      console.log(`CORS: Allowing origin ${origin}`);
+    console.log(`Express CORS: Checking origin "${normalizedOrigin}" against allowed origins:`, uniqueOrigins);
+    
+    if (uniqueOrigins.indexOf(normalizedOrigin) !== -1) {
+      console.log(`Express CORS: ✅ Allowing origin "${origin}"`);
       callback(null, true);
     } else {
-      console.log(`CORS: Blocked origin ${origin}. Allowed origins:`, uniqueOrigins);
-      callback(new Error('Not allowed by CORS'));
+      console.log(`Express CORS: ❌ Blocked origin "${origin}". Allowed origins:`, uniqueOrigins);
+      callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
     }
   },
   credentials: true,

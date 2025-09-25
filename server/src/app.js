@@ -84,7 +84,7 @@ app.use(helmet());
 // Register health check route after CORS is configured
 app.use('/api/health', healthRoutes);
 
-// Additional explicit CORS handler for preflight requests
+// Request logging for debugging (CORS headers are handled by security.js middleware)
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
@@ -110,24 +110,6 @@ app.use((req, res, next) => {
   }
   console.log('Body preview:', bodyPreview);
   
-  // Set CORS headers explicitly for all requests
-  if (origin) {
-    res.header('Access-Control-Allow-Origin', origin);
-  } else {
-    res.header('Access-Control-Allow-Origin', 'https://worksync-app.vercel.app');
-  }
-  
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With, X-Workspace-Id, Cache-Control');
-  res.header('Access-Control-Max-Age', '86400');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS preflight request from:', origin);
-    return res.status(200).end();
-  }
-  
   next();
 });
 
@@ -141,19 +123,18 @@ app.use(rateLimiters.general);
 // Routes with enhanced security
 const minimalRoutes = process.env.MINIMAL_ROUTES === '1';
 
-if (minimalRoutes) {
-  // Only auth routes for isolation
-  if (process.env.NODE_ENV !== 'test') {
-    app.use('/api/auth', rateLimiters.auth, authRoutes);
-  } else {
-    app.use('/api/auth', authRoutes);
-  }
-} else {
-  if (process.env.NODE_ENV !== 'test') {
-    app.use('/api/auth', rateLimiters.auth, authRoutes); // Enhanced auth rate limiting
-  } else {
-    app.use('/api/auth', authRoutes);
-  }
+// Apply rate limiting to auth routes in production
+if (process.env.NODE_ENV !== 'test') {
+  app.use('/api/auth', rateLimiters.auth);
+  app.use('/auth', rateLimiters.auth); // Apply to legacy routes too
+}
+
+// Mount auth routes (both API and legacy)
+app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes); // Legacy endpoint support
+
+if (!minimalRoutes) {
+  // Mount protected routes with authentication (API prefix)
   app.use('/api/projects', authenticateToken, projectRoutes);
   app.use('/api/tasks', authenticateToken, taskRoutes);
   app.use('/api/notes', authenticateToken, noteRoutes);
@@ -166,14 +147,31 @@ if (minimalRoutes) {
   app.use('/api/notifications', authenticateToken, notificationRoutes);
   app.use('/api/activity', authenticateToken, activityRoutes);
   app.use('/api/calendar', authenticateToken, calendarRoutes);
+  
+  // Legacy routes without /api prefix for backward compatibility
+  app.use('/projects', authenticateToken, projectRoutes);
+  app.use('/tasks', authenticateToken, taskRoutes);
+  app.use('/notes', authenticateToken, noteRoutes);
+  app.use('/users', authenticateToken, userRoutes);
+  app.use('/events', authenticateToken, eventRoutes);
+  app.use('/workspaces', authenticateToken, workspaceRoutes);
+  app.use('/comments', authenticateToken, commentRoutes);
+  app.use('/tags', authenticateToken, tagRoutes);
+  app.use('/subtasks', authenticateToken, subtaskRoutes);
+  app.use('/notifications', authenticateToken, notificationRoutes);
+  app.use('/activity', authenticateToken, activityRoutes);
+  app.use('/calendar', authenticateToken, calendarRoutes);
+  
+  // Routes with additional rate limiting
   app.use('/api/attachments', authenticateToken, rateLimiters.fileUpload, attachmentRoutes);
-  // Phase 2 Collaboration Routes
   app.use('/api/presence', authenticateToken, rateLimiters.realtime, presenceRoutes);
   app.use('/api/collaboration', authenticateToken, rateLimiters.realtime, collaborationRoutes);
+  
+  // Legacy routes with rate limiting
+  app.use('/attachments', authenticateToken, rateLimiters.fileUpload, attachmentRoutes);
+  app.use('/presence', authenticateToken, rateLimiters.realtime, presenceRoutes);
+  app.use('/collaboration', authenticateToken, rateLimiters.realtime, collaborationRoutes);
 }
-
-// Handle legacy /auth routes by mounting the same router
-app.use('/auth', authRoutes);
 
 // 404 handler will be handled by Express default
 

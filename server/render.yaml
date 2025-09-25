@@ -23,5 +23,5 @@ services:
       - key: JWT_SECRET
         value: 037db6d61a319ba7c06a5d412dca375d5dec893688d947a8415f650f5a839f737eae1fa63c54d6e7844c998a4567bc41cb8c04d76074255cecc5c8f20810e207
       - key: FRONTEND_URL
-        value: https://worksync-c.vercel.app
+        value: https://worksync-app.vercel.app
 

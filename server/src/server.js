@@ -30,9 +30,36 @@ async function startServer() {
     const server = http.createServer(app);
     io = new Server(server, {
       cors: {
-        origin: config.FRONTEND_URL,
+        origin: function (origin, callback) {
+          // Allow requests with no origin (mobile apps, etc.)
+          if (!origin) return callback(null, true);
+          
+          // Get allowed origins and normalize them (remove trailing slashes)
+          const frontendUrl = config.FRONTEND_URL?.replace(/\/$/, '') || 'https://worksync-app.vercel.app';
+          const allowedOrigins = [
+            'http://localhost:3100', 
+            'http://localhost:3000', 
+            'https://worksync-app.vercel.app',
+            'https://worksync-c.vercel.app',
+            frontendUrl
+          ].map(url => url.replace(/\/$/, '')); // Remove trailing slashes
+          
+          // Normalize the incoming origin (remove trailing slash)
+          const normalizedOrigin = origin.replace(/\/$/, '');
+          
+          console.log(`Socket.IO CORS: Checking origin "${normalizedOrigin}" against allowed origins:`, allowedOrigins);
+          
+          if (allowedOrigins.includes(normalizedOrigin)) {
+            console.log(`Socket.IO CORS: ✅ Allowing origin "${origin}"`);
+            callback(null, true);
+          } else {
+            console.log(`Socket.IO CORS: ❌ Blocked origin "${origin}". Allowed origins:`, allowedOrigins);
+            callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
+          }
+        },
         methods: ['GET', 'POST'],
-        credentials: true
+        credentials: true,
+        allowEIO3: true // Enable Engine.IO v3 compatibility if needed
       }
     });
     

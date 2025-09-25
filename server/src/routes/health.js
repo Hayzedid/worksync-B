@@ -4,25 +4,59 @@ import { pool } from '../config/database.js';
 
 const router = express.Router();
 
-// Handle preflight requests for health endpoint
-router.options('/', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://worksync-app.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(200);
-});
+// Preflight requests are handled by the main CORS middleware
 
 router.get('/', async (req, res) => {
   try {
-    // Simple DB check
-    await pool.query('SELECT 1');
+    // Get database connection info
+    const [dbInfo] = await pool.query(`
+      SELECT 
+        DATABASE() as current_database,
+        USER() as current_user,
+        @@hostname as hostname,
+        @@port as port,
+        @@version as mysql_version,
+        COUNT(*) as connection_test
+      FROM dual
+    `);
+    
+    // Get table count from current database
+    const [tableInfo] = await pool.query(`
+      SELECT COUNT(*) as table_count 
+      FROM information_schema.tables 
+      WHERE table_schema = DATABASE()
+    `);
+    
+    // Get user count (if users table exists)
+    let userCount = 'N/A';
+    try {
+      const [userInfo] = await pool.query('SELECT COUNT(*) as user_count FROM users');
+      userCount = userInfo[0].user_count;
+    } catch (e) {
+      userCount = `Error: ${e.message}`;
+    }
+    
     res.json({ 
       ok: true, 
       environment: NODE_ENV, 
       timestamp: new Date().toISOString(), 
-      db: 'ok', 
       uptime: process.uptime(),
+      database: {
+        name: dbInfo[0].current_database,
+        user: dbInfo[0].current_user,
+        hostname: dbInfo[0].hostname,
+        port: dbInfo[0].port,
+        version: dbInfo[0].mysql_version,
+        table_count: tableInfo[0].table_count,
+        user_count: userCount
+      },
+      config: {
+        DB_HOST: process.env.DB_HOST || 'not set',
+        DB_PORT: process.env.DB_PORT || 'not set', 
+        DB_NAME: process.env.DB_NAME || 'not set',
+        DB_USER: process.env.DB_USER || 'not set',
+        NODE_ENV: process.env.NODE_ENV || 'not set'
+      },
       corsHeaders: {
         origin: req.headers.origin,
         allowOrigin: res.getHeader('Access-Control-Allow-Origin'),
@@ -31,7 +65,18 @@ router.get('/', async (req, res) => {
       }
     });
   } catch (err) {
-    res.status(500).json({ success: false, status: 'error', message: err.message });
+    res.status(500).json({ 
+      success: false, 
+      status: 'error', 
+      message: err.message,
+      config: {
+        DB_HOST: process.env.DB_HOST || 'not set',
+        DB_PORT: process.env.DB_PORT || 'not set', 
+        DB_NAME: process.env.DB_NAME || 'not set',
+        DB_USER: process.env.DB_USER || 'not set',
+        NODE_ENV: process.env.NODE_ENV || 'not set'
+      }
+    });
   }
 });
 
