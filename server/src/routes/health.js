@@ -8,17 +8,20 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   try {
-    // Get database connection info
+    // Get database connection info (Railway MySQL compatible)
     const [dbInfo] = await pool.query(`
       SELECT 
         DATABASE() as current_database,
         USER() as current_user,
-        @@hostname as hostname,
-        @@port as port,
-        @@version as mysql_version,
-        COUNT(*) as connection_test
-      FROM dual
+        VERSION() as mysql_version,
+        1 as connection_test
     `);
+    
+    // Add server info from environment (Railway doesn't expose system variables)
+    const serverInfo = {
+      hostname: process.env.DB_HOST || 'railway-mysql',
+      port: process.env.DB_PORT || '3306'
+    };
     
     // Get table count from current database
     const [tableInfo] = await pool.query(`
@@ -44,8 +47,8 @@ router.get('/', async (req, res) => {
       database: {
         name: dbInfo[0].current_database,
         user: dbInfo[0].current_user,
-        hostname: dbInfo[0].hostname,
-        port: dbInfo[0].port,
+        hostname: serverInfo.hostname,
+        port: serverInfo.port,
         version: dbInfo[0].mysql_version,
         table_count: tableInfo[0].table_count,
         user_count: userCount
