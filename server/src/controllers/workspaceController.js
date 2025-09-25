@@ -9,7 +9,7 @@ import {
   // ...other service functions
 } from '../services/workspaceService.js';
 import { getUserByEmail, getUserById } from '../models/User.js';
-import { addUserToWorkspace, getWorkspaceMembers } from '../models/Workspace.js';
+import { addUserToWorkspace, getWorkspaceMembers, checkWorkspaceInvitePermission } from '../models/Workspace.js';
 import { 
   createWorkspaceInvitation, 
   getInvitationByToken, 
@@ -26,7 +26,7 @@ export async function createWorkspaceHandler(req, res) {
 
   try {
     const workspaceId = await createWorkspaceService({ name, description, created_by });
-    await addUserToWorkspace(workspaceId, created_by); // add creator as member
+    await addUserToWorkspace(workspaceId, created_by, 'owner'); // add creator as owner
     res.status(201).json({ message: 'Workspace created', workspaceId });
   } catch (error) {
     console.error(error);
@@ -56,8 +56,11 @@ export async function inviteByEmailHandler(req, res) {
       return res.status(404).json({ error: 'Workspace not found' });
     }
 
-    // For now, let anyone in the workspace invite others
-    // TODO: Add proper permission check (only admins/creators can invite)
+    // Check if user has permission to invite others
+    const permissionCheck = await checkWorkspaceInvitePermission(workspace_id, inviterId);
+    if (!permissionCheck.hasPermission) {
+      return res.status(403).json({ error: permissionCheck.reason });
+    }
 
     const normalizedEmail = String(email).toLowerCase().trim();
     const inviterName = `${inviterUser.first_name} ${inviterUser.last_name}`;

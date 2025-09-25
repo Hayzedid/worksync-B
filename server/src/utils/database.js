@@ -58,7 +58,7 @@ const optimizedQueries = {
         'w.name',
         'w.description',
         'w.created_at',
-        'w.owner_id',
+        'w.created_by',
         knex.raw('COUNT(DISTINCT wm.user_id) as member_count'),
         knex.raw('COUNT(DISTINCT t.id) as task_count'),
         knex.raw('COUNT(DISTINCT n.id) as note_count')
@@ -70,10 +70,10 @@ const optimizedQueries = {
       })
       .leftJoin('notes as n', 'w.id', 'n.workspace_id')
       .where(function() {
-        this.where('w.owner_id', userId)
+        this.where('w.created_by', userId)
             .orWhere('wm.user_id', userId);
       })
-      .groupBy('w.id', 'w.name', 'w.description', 'w.created_at', 'w.owner_id')
+      .groupBy('w.id', 'w.name', 'w.description', 'w.created_at', 'w.created_by')
       .orderBy('w.created_at', 'desc');
   },
 
