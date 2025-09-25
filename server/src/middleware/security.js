@@ -37,10 +37,10 @@ const createRateLimit = (windowMs, max, message) => {
 
 // Different rate limits for different endpoints
 const rateLimiters = {
-  // General API rate limit: 100 requests per 15 minutes
+  // General API rate limit: 200 requests per 15 minutes (increased for better UX)
   general: createRateLimit(
     15 * 60 * 1000, // 15 minutes
-    100,
+    200,
     'Too many requests from this IP, please try again later'
   ),
 
