@@ -3,12 +3,24 @@ import { getProjectsService, getProjectService, updateProjectService, deleteProj
 import { normalizeStatus } from '../utils/status.js';
 export const updateProject = async (req, res, next) => {
   try {
+    const { name, description, status, workspace_id, owner_id } = req.body;
     const updateData = {
       id: req.params.id,
       userId: req.user.id,
-      ...req.body
+      name,
+      description,
+      status: normalizeStatus(status),
+      workspace_id,
+      owner_id
     };
-    // ...existing update logic here...
+    
+    const affectedRows = await updateProjectService(updateData);
+    if (affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Project not found or access denied' });
+    }
+    
+    const updatedProject = await getProjectService(req.params.id, req.user.id);
+    res.json({ success: true, message: 'Project updated', project: updatedProject });
   } catch (err) {
     next(err);
   }
