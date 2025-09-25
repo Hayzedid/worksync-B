@@ -12,7 +12,6 @@ router.get('/', async (req, res) => {
     const [dbInfo] = await pool.query(`
       SELECT 
         DATABASE() as current_database,
-        USER() as current_user,
         VERSION() as mysql_version,
         1 as connection_test
     `);
@@ -46,7 +45,7 @@ router.get('/', async (req, res) => {
       uptime: process.uptime(),
       database: {
         name: dbInfo[0].current_database,
-        user: dbInfo[0].current_user,
+        user: process.env.DB_USER || 'railway-user',
         hostname: serverInfo.hostname,
         port: serverInfo.port,
         version: dbInfo[0].mysql_version,
