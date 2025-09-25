@@ -33,17 +33,17 @@ export const getProjectById = async (projectId, userId) => {
 
 export const createNewProject = async ({ userId, name, description, status, workspace_id = null }) => {
   const [result] = await pool.execute(
-    'INSERT INTO projects (created_by, name, description, status, workspace_id) VALUES (?, ?, ?, ?, ?)',
-  sanitizeParams([userId, name, description || '', status || 'active', workspace_id])
+    'INSERT INTO projects (created_by, owner_id, name, description, status, workspace_id) VALUES (?, ?, ?, ?, ?, ?)',
+  sanitizeParams([userId, userId, name, description || '', status || 'active', workspace_id])
   );
   return result.insertId;
 };
 
-export const updateProjectById = async ({ id, userId, name, description, status, workspace_id }) => {
+export const updateProjectById = async ({ id, userId, name, description, status, workspace_id, owner_id }) => {
   console.log('Status to update:', status);
   const [result] = await pool.execute(
-    'UPDATE projects SET name = ?, description = ?, status = ?, workspace_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND created_by = ?',
-  sanitizeParams([name, description, status, workspace_id, id, userId])
+    'UPDATE projects SET name = ?, description = ?, status = ?, workspace_id = ?, owner_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND created_by = ?',
+  sanitizeParams([name, description, status, workspace_id, owner_id || userId, id, userId])
   );
   return result.affectedRows;
 };
