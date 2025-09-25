@@ -32,6 +32,7 @@ export const getProjectById = async (projectId, userId) => {
 };
 
 export const createNewProject = async ({ userId, name, description, status, workspace_id = null }) => {
+  // Fixed: Added owner_id field to prevent "Field 'owner_id' doesn't have a default value" error
   const [result] = await pool.execute(
     'INSERT INTO projects (created_by, owner_id, name, description, status, workspace_id) VALUES (?, ?, ?, ?, ?, ?)',
   sanitizeParams([userId, userId, name, description || '', status || 'active', workspace_id])
