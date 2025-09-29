@@ -7,9 +7,16 @@ import rateLimit from '../middleware/rateLimit.js';
 
 const router = express.Router();
 
-router.post('/register', validateRegister, validateRequest, registerUser);
-router.post('/login', validateLogin, validateRequest, loginUser);
-router.post('/logout', logoutUser);
+// More specific rate limiting for login/register (10 attempts per 15 minutes)
+const authLimiter = rateLimit({ 
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts
+  message: { success: false, message: 'Too many authentication attempts, please try again later' }
+});
+
+router.post('/register', authLimiter, validateRegister, validateRequest, registerUser);
+router.post('/login', authLimiter, validateLogin, validateRequest, loginUser);
+router.post('/logout', logoutUser); // No rate limiting on logout
 router.get('/me', authenticateToken, (req, res) => {
   return res.json({ success: true, user: req.user });
 });

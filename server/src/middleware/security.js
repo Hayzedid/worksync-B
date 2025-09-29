@@ -31,10 +31,10 @@ const rateLimiters = {
     'Too many requests from this IP, please try again later'
   ),
 
-  // Auth endpoints: 5 attempts per 15 minutes
+  // Auth endpoints: 10 attempts per 15 minutes (more reasonable)
   auth: createRateLimit(
     15 * 60 * 1000, // 15 minutes
-    5,
+    10,
     'Too many authentication attempts, please try again later'
   ),
 
@@ -75,35 +75,14 @@ const speedLimiters = {
 const suspiciousActivity = new Map();
 
 const trackSuspiciousActivity = (req, res, next) => {
+  // Simplified suspicious activity tracking - just log for now
+  // The previous implementation had a bug checking res.statusCode before response was sent
   const ip = req.ip || req.connection.remoteAddress;
-  const now = Date.now();
   
-  if (!suspiciousActivity.has(ip)) {
-    suspiciousActivity.set(ip, { count: 0, firstSeen: now });
-  }
-  
-  const activity = suspiciousActivity.get(ip);
-  
-  // Reset counter every hour
-  if (now - activity.firstSeen > 60 * 60 * 1000) {
-    activity.count = 0;
-    activity.firstSeen = now;
-  }
-  
-  // Check for suspicious patterns
-  const isAuthRequest = req.path.includes('/auth/');
-  const isFailedRequest = res.statusCode >= 400;
-  
-  if (isAuthRequest && isFailedRequest) {
-    activity.count += 1;
-    
-    // Block IP after too many failed attempts
-    if (activity.count > 20) {
-      return res.status(429).json({
-        success: false,
-        error: 'IP temporarily blocked due to suspicious activity'
-      });
-    }
+  // Only track actual suspicious patterns, not normal auth requests
+  if (req.path.includes('/auth/login') || req.path.includes('/auth/register')) {
+    // Could implement more sophisticated tracking here if needed
+    console.log(`Auth request from IP: ${ip} to ${req.path}`);
   }
   
   next();
@@ -186,12 +165,23 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
-      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
       : ['http://localhost:3100', 'http://localhost:3000'];
     
-    console.log(`CORS: Origin "${origin}" - Allowed: [${allowedOrigins.join(', ')}]`);
+    // Add both versions (with and without trailing slash) to handle CORS edge cases
+    const normalizedOrigins = [...allowedOrigins];
+    allowedOrigins.forEach(origin => {
+      if (!normalizedOrigins.includes(origin + '/')) {
+        normalizedOrigins.push(origin + '/');
+      }
+    });
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Normalize the incoming origin (remove trailing slash)
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    
+    console.log(`CORS: Origin "${origin}" (normalized: "${normalizedOrigin}") - Allowed: [${normalizedOrigins.join(', ')}]`);
+    
+    if (normalizedOrigins.includes(origin) || normalizedOrigins.includes(normalizedOrigin)) {
       console.log(`CORS: Allowed origin ${origin}`);
       callback(null, true);
     } else {

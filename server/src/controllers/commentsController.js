@@ -26,9 +26,9 @@ export const getItemComments = async (req, res) => {
         u.profile_picture,
         COUNT(cr.id) as reaction_count
       FROM comments c
-      JOIN users u ON c.created_by = u.id
+      JOIN users u ON c.user_id = u.id
       LEFT JOIN comment_reactions cr ON c.id = cr.comment_id
-      WHERE c.commentable_type = ? AND c.commentable_id = ?
+      WHERE c.entity_type = ? AND c.entity_id = ?
       GROUP BY c.id
       ORDER BY c.created_at ASC
       LIMIT ? OFFSET ?
@@ -77,7 +77,7 @@ export const createComment = async (req, res) => {
     }
 
   const [result] = await pool.execute(`
-      INSERT INTO comments (content, commentable_type, commentable_id, created_by, parent_id)
+      INSERT INTO comments (content, entity_type, entity_id, user_id, parent_id)
       VALUES (?, ?, ?, ?, ?)
     `, [content, itemType, itemId, userId, parentId]);
 
@@ -85,7 +85,7 @@ export const createComment = async (req, res) => {
   const [commentRows] = await pool.execute(`
       SELECT c.*, u.username, u.first_name, u.last_name, u.profile_picture
       FROM comments c
-      JOIN users u ON c.created_by = u.id
+      JOIN users u ON c.user_id = u.id
       WHERE c.id = ?
     `, [result.insertId]);
 
@@ -108,7 +108,7 @@ export const updateComment = async (req, res) => {
 
     // Verify ownership
   const [commentRows] = await pool.execute(
-      'SELECT * FROM comments WHERE id = ? AND created_by = ?',
+      'SELECT * FROM comments WHERE id = ? AND user_id = ?',
       [id, userId]
     );
 
@@ -142,7 +142,7 @@ export const deleteComment = async (req, res) => {
 
     // Verify ownership
   const [commentRows] = await pool.execute(
-      'SELECT * FROM comments WHERE id = ? AND created_by = ?',
+      'SELECT * FROM comments WHERE id = ? AND user_id = ?',
       [id, userId]
     );
 

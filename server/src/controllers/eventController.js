@@ -24,8 +24,8 @@ function shapeEvent(row) {
   return {
     id: row.id,
     title: row.title,
-    start: row.start_date ?? row.start ?? null,
-    end: row.end_date ?? row.end ?? null,
+    start: row.start_date ?? null,
+    end: row.end_date ?? null,
     all_day: typeof row.all_day === 'number' ? row.all_day : (row.all_day ? 1 : 0),
     allDay: !!row.all_day,
     location: row.location ?? null,

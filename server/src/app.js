@@ -88,17 +88,9 @@ const minimalRoutes = process.env.MINIMAL_ROUTES === '1';
 
 if (minimalRoutes) {
   // Only auth routes for isolation
-  if (process.env.NODE_ENV !== 'test') {
-    app.use('/api/auth', rateLimiters.auth, authRoutes);
-  } else {
-    app.use('/api/auth', authRoutes);
-  }
+  app.use('/api/auth', authRoutes);
 } else {
-  if (process.env.NODE_ENV !== 'test') {
-    app.use('/api/auth', rateLimiters.auth, authRoutes); // Enhanced auth rate limiting
-  } else {
-    app.use('/api/auth', authRoutes);
-  }
+  app.use('/api/auth', authRoutes);
   app.use('/api/projects', authenticateToken, projectRoutes);
   app.use('/api/tasks', authenticateToken, taskRoutes);
   app.use('/api/notes', authenticateToken, noteRoutes);

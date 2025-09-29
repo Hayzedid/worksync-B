@@ -16,15 +16,13 @@ export const createEvent = async ({
   category = null,
 }) => {
   const sql = `
-    INSERT INTO events (title, start_date, end_date, start, end, owner_id, all_day, location, description, workspace_id, project_id, category)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO events (title, start_date, end_date, owner_id, all_day, location, description, workspace_id, project_id, category)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const params = [
     title,
     start_date,
     end_date,
-    start_date, // mirror for legacy `start` column if present
-    end_date,   // mirror for legacy `end` column if present
     owner_id,
     all_day,
     location,

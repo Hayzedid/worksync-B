@@ -27,9 +27,23 @@ async function startServer() {
     }
     
     const server = http.createServer(app);
+    
+    // Get allowed origins from environment variable, same as HTTP CORS
+    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim().replace(/\/$/, ''))
+      : ['http://localhost:3100', 'http://localhost:3000'];
+    
+    // Add both versions (with and without trailing slash)
+    const normalizedOrigins = [...allowedOrigins];
+    allowedOrigins.forEach(origin => {
+      if (!normalizedOrigins.includes(origin + '/')) {
+        normalizedOrigins.push(origin + '/');
+      }
+    });
+    
     io = new Server(server, {
       cors: {
-  origin: config.FRONTEND_URL,
+        origin: normalizedOrigins,
         methods: ['GET', 'POST'],
         credentials: true
       }
