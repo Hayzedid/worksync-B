@@ -56,10 +56,6 @@ app.use(requestLogger);
 // Suspicious activity tracking
 app.use(trackSuspiciousActivity);
 
-// Register health check route before any other middleware or route
-app.use('/api/health', healthRoutes);
-app.use('/api/newsletter', newsletterRoutes);
-
 // Enforce HTTPS in production
 if (NODE_ENV === 'production') {
   app.use((req, res, next) => {
@@ -73,8 +69,12 @@ if (NODE_ENV === 'production') {
 // Security: Set secure HTTP headers with production CORS
 app.use(helmet());
 
-// Production CORS configuration
+// Production CORS configuration - MUST come before routes
 app.use(cors(corsOptions));
+
+// Register health check route AFTER CORS middleware
+app.use('/api/health', healthRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 app.use(json({ limit: '10mb' }));
 app.use(urlencoded({ extended: true, limit: '10mb' }));

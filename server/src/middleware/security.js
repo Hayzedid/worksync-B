@@ -186,10 +186,13 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
-      ? process.env.ALLOWED_ORIGINS.split(',')
+      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
       : ['http://localhost:3100', 'http://localhost:3000'];
     
+    console.log(`CORS: Origin "${origin}" - Allowed: [${allowedOrigins.join(', ')}]`);
+    
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log(`CORS: Allowed origin ${origin}`);
       callback(null, true);
     } else {
       console.log(`CORS: Blocked origin ${origin}`);
@@ -197,6 +200,8 @@ const corsOptions = {
     }
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   optionsSuccessStatus: 200 // For legacy browser support
 };
 
