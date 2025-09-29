@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   status ENUM('todo', 'in_progress', 'review', 'done') DEFAULT 'todo',
   priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
   due_date DATE,
+  email_reminders BOOLEAN DEFAULT FALSE,
   created_by INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

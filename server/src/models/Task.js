@@ -62,6 +62,7 @@ export async function createTask({
   actual_hours,
   position,
   workspace_id, // NEW
+  email_reminders, // NEW
 }) {
   const [result] = await pool.execute(
     `INSERT INTO tasks (
@@ -78,8 +79,9 @@ export async function createTask({
       estimated_hours,
       actual_hours,
       position,
-      workspace_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      workspace_id,
+      email_reminders
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     sanitizeParams([
       title,
       description,
@@ -95,6 +97,7 @@ export async function createTask({
       actual_hours,
       position,
       workspace_id,
+      email_reminders,
     ])
   );
 

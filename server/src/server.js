@@ -70,6 +70,9 @@ async function startServer() {
     
     // Start recurring job logic
     import('./services/recurringJob.js');
+    
+    // Start reminder service for email notifications
+    import('./services/reminderService.js');
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

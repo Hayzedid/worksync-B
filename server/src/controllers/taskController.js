@@ -95,7 +95,8 @@ export async function createNewTask(req, res, next) {
       estimated_hours,
       actual_hours,
       position,
-      workspace_id
+      workspace_id,
+      email_reminders
     } = req.body;
     const created_by = req.user.id;
     let normalizedStatus = status ? String(status).toLowerCase().replace(/-/g, '_') : 'todo';
@@ -136,6 +137,7 @@ export async function createNewTask(req, res, next) {
       actual_hours: actual_hours ?? null,
       position: position ?? 0,
       workspace_id: workspace_id ?? null,
+      email_reminders: email_reminders ?? false,
     };
     
     const taskId = await createTaskService(taskData);
