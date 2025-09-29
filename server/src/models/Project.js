@@ -7,7 +7,7 @@ export const getAllProjectsForUser = async (userId, workspaceId) => {
     SELECT p.*, w.id AS workspace_join_id, w.name AS workspace_name
     FROM projects p
     LEFT JOIN workspaces w ON p.workspace_id = w.id
-    WHERE p.created_by = ?`;
+    WHERE p.owner_id = ?`;
   const params = [userId];
   if (workspaceId) {
     sql += ' AND p.workspace_id = ?';
@@ -25,26 +25,25 @@ export const getProjectById = async (projectId, userId) => {
     `SELECT p.*, w.id AS workspace_join_id, w.name AS workspace_name
      FROM projects p
      LEFT JOIN workspaces w ON p.workspace_id = w.id
-     WHERE p.id = ? AND p.created_by = ?`,
+     WHERE p.id = ? AND p.owner_id = ?`,
   sanitizeParams([projectId, userId])
   );
   return rows[0];
 };
 
 export const createNewProject = async ({ userId, name, description, status, workspace_id = null }) => {
-  // Fixed: Added owner_id field to prevent "Field 'owner_id' doesn't have a default value" error
   const [result] = await pool.execute(
-    'INSERT INTO projects (created_by, owner_id, name, description, status, workspace_id) VALUES (?, ?, ?, ?, ?, ?)',
-  sanitizeParams([userId, userId, name, description || '', status || 'active', workspace_id])
+    'INSERT INTO projects (owner_id, name, description, status, workspace_id) VALUES (?, ?, ?, ?, ?)',
+  sanitizeParams([userId, name, description || '', status || 'active', workspace_id])
   );
   return result.insertId;
 };
 
-export const updateProjectById = async ({ id, userId, name, description, status, workspace_id, owner_id }) => {
+export const updateProjectById = async ({ id, userId, name, description, status, workspace_id }) => {
   console.log('Status to update:', status);
   const [result] = await pool.execute(
-    'UPDATE projects SET name = ?, description = ?, status = ?, workspace_id = ?, owner_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND created_by = ?',
-  sanitizeParams([name, description, status, workspace_id, owner_id || userId, id, userId])
+    'UPDATE projects SET name = ?, description = ?, status = ?, workspace_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND owner_id = ?',
+  sanitizeParams([name, description, status, workspace_id, id, userId])
   );
   return result.affectedRows;
 };
@@ -60,14 +59,14 @@ export const deleteProjectById = async (id, userId) => {
   console.log('[deleteProjectById] About to execute SQL DELETE with:', [safeId, safeUserId]);
 
   const [result] = await pool.execute(
-    'DELETE FROM projects WHERE id = ? AND created_by = ?',
+    'DELETE FROM projects WHERE id = ? AND owner_id = ?',
     sanitizeParams([safeId, safeUserId])
   );
   return result.affectedRows;
 };
 
 export async function searchProjects({ userId, q, status, workspaceId }) {
-  let sql = `SELECT * FROM projects WHERE created_by = ?`;
+  let sql = `SELECT * FROM projects WHERE owner_id = ?`;
   const params = [userId];
   if (workspaceId) {
     sql += ' AND workspace_id = ?';

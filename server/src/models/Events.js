@@ -16,13 +16,15 @@ export const createEvent = async ({
   category = null,
 }) => {
   const sql = `
-    INSERT INTO events (title, start_date, end_date, owner_id, all_day, location, description, workspace_id, project_id, category)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO events (title, start_date, end_date, start, end, owner_id, all_day, location, description, workspace_id, project_id, category)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const params = [
     title,
     start_date,
     end_date,
+    start_date, // mirror for legacy `start` column if present
+    end_date,   // mirror for legacy `end` column if present
     owner_id,
     all_day,
     location,
@@ -101,64 +103,14 @@ export const getEventsByDateRange = async (start, end) => {
 }
 
 export async function getRecurringEvents() {
-  const [rows] = await pool.execute('SELECT * FROM events WHERE recurrence_pattern != "none" AND is_recurring_template = TRUE');
+  const [rows] = await pool.execute('SELECT * FROM events WHERE recurrence IS NOT NULL');
   return rows;
 }
 
 export async function createEventInstance(event) {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-  // Calculate new start and end dates based on recurrence pattern
-  let newStartDate = new Date(event.start_date);
-  let newEndDate = new Date(event.end_date);
-  
-  switch (event.recurrence_pattern) {
-    case 'daily':
-      newStartDate.setDate(newStartDate.getDate() + (event.recurrence_interval || 1));
-      newEndDate.setDate(newEndDate.getDate() + (event.recurrence_interval || 1));
-      break;
-    case 'weekly':
-      newStartDate.setDate(newStartDate.getDate() + (7 * (event.recurrence_interval || 1)));
-      newEndDate.setDate(newEndDate.getDate() + (7 * (event.recurrence_interval || 1)));
-      break;
-    case 'monthly':
-      newStartDate.setMonth(newStartDate.getMonth() + (event.recurrence_interval || 1));
-      newEndDate.setMonth(newEndDate.getMonth() + (event.recurrence_interval || 1));
-      break;
-    case 'yearly':
-      newStartDate.setFullYear(newStartDate.getFullYear() + (event.recurrence_interval || 1));
-      newEndDate.setFullYear(newEndDate.getFullYear() + (event.recurrence_interval || 1));
-      break;
-  }
-
-  // Create new event instance
-  const [result] = await pool.execute(
-    `INSERT INTO events (title, description, start_date, end_date, owner_id, 
-                        workspace_id, project_id, category, location, all_day,
-                        parent_recurring_event_id, is_recurring_template) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    sanitizeParams([
-      event.title, 
-      event.description, 
-      newStartDate, 
-      newEndDate, 
-      event.owner_id,
-      event.workspace_id,
-      event.project_id,
-      event.category,
-      event.location,
-      event.all_day,
-      event.id, // Reference to parent recurring event
-      false // This is an instance, not a template
-    ])
-  );
-
-  // Update the parent event's last_recurrence_date
+  // Example: create a new event based on the recurring event
   await pool.execute(
-    'UPDATE events SET last_recurrence_date = ? WHERE id = ?',
-    sanitizeParams([today, event.id])
+    'INSERT INTO events (title, description, start_date, end_date, owner_id, recurrence) VALUES (?, ?, ?, ?, ?, ?)',
+    sanitizeParams([event.title, event.description, event.start_date, event.end_date, event.owner_id, event.recurrence])
   );
-
-  return result.insertId;
 }

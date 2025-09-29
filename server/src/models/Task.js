@@ -217,66 +217,16 @@ export async function assignTaskToUser(taskId, userId) {
 }
 
 export async function getRecurringTasks() {
-  const [rows] = await pool.execute('SELECT * FROM tasks WHERE recurrence_pattern != "none" AND is_recurring_template = TRUE');
+  const [rows] = await pool.execute('SELECT * FROM tasks WHERE recurrence IS NOT NULL');
   return rows;
 }
 
 export async function createTaskInstance(task) {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  
-  // Calculate new due date based on recurrence pattern
-  let newDueDate = task.due_date ? new Date(task.due_date) : null;
-  
-  if (newDueDate) {
-    switch (task.recurrence_pattern) {
-      case 'daily':
-        newDueDate.setDate(newDueDate.getDate() + (task.recurrence_interval || 1));
-        break;
-      case 'weekly':
-        newDueDate.setDate(newDueDate.getDate() + (7 * (task.recurrence_interval || 1)));
-        break;
-      case 'monthly':
-        newDueDate.setMonth(newDueDate.getMonth() + (task.recurrence_interval || 1));
-        break;
-      case 'yearly':
-        newDueDate.setFullYear(newDueDate.getFullYear() + (task.recurrence_interval || 1));
-        break;
-    }
-  }
-
-  // Create new task instance
-  const [result] = await pool.execute(
-    `INSERT INTO tasks (title, description, assigned_to, created_by, due_date, priority, status, 
-                       project_id, workspace_id, start_date, estimated_hours, actual_hours, position,
-                       parent_recurring_task_id, is_recurring_template) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    sanitizeParams([
-      task.title, 
-      task.description, 
-      task.assigned_to, 
-      task.created_by, 
-      newDueDate, 
-      task.priority, 
-      'todo', // New instances start as todo
-      task.project_id,
-      task.workspace_id,
-      task.start_date,
-      task.estimated_hours,
-      0, // Reset actual hours for new instance
-      task.position,
-      task.id, // Reference to parent recurring task
-      false // This is an instance, not a template
-    ])
-  );
-
-  // Update the parent task's last_recurrence_date
+  // Example: create a new task based on the recurring task
   await pool.execute(
-    'UPDATE tasks SET last_recurrence_date = ? WHERE id = ?',
-    sanitizeParams([today, task.id])
+    'INSERT INTO tasks (title, description, assigned_to, created_by, recurrence, due_date, priority, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+  sanitizeParams([task.title, task.description, task.assigned_to, task.created_by, task.recurrence, task.due_date, task.priority, 'pending'])
   );
-
-  return result.insertId;
 }
 
 export async function searchTasks({ userId, q, status, priority, assigned_to }) {

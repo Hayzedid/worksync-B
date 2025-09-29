@@ -9,16 +9,13 @@ async function initDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
-        first_name VARCHAR(100) NOT NULL,
-        last_name VARCHAR(100) NOT NULL,
-        username VARCHAR(100) UNIQUE NOT NULL,
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        username VARCHAR(100) UNIQUE,
         profile_picture VARCHAR(255),
         timezone VARCHAR(50) DEFAULT 'UTC',
         email_verified BOOLEAN DEFAULT FALSE,
         is_active BOOLEAN DEFAULT TRUE,
-        last_seen TIMESTAMP NULL,
-        current_page VARCHAR(255),
-        is_online BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
@@ -43,28 +40,12 @@ async function initDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         workspace_id INT NOT NULL,
         user_id INT NOT NULL,
-        role ENUM('owner', 'admin', 'member', 'viewer') DEFAULT 'member',
-        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        role ENUM('member', 'admin', 'owner') DEFAULT 'member',
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE KEY unique_workspace_user (workspace_id, user_id)
-      )
-    `);
-
-    // Create workspace_invitations table
-    await pool.execute(`
-      CREATE TABLE IF NOT EXISTS workspace_invitations (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        workspace_id INT NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        invite_token VARCHAR(255) NOT NULL UNIQUE,
-        invited_by INT NOT NULL,
-        status ENUM('pending', 'accepted', 'expired') DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        expires_at TIMESTAMP NOT NULL,
-        accepted_at TIMESTAMP NULL,
-        FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
-        FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
 
@@ -73,20 +54,12 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS events (
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(255) NOT NULL,
-        description TEXT,
         start_date DATETIME NOT NULL,
         end_date DATETIME NOT NULL,
         owner_id INT NOT NULL,
-        all_day BOOLEAN DEFAULT FALSE,
-        location VARCHAR(255),
-        workspace_id INT,
-        project_id INT,
-        category VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE SET NULL,
-        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
 
@@ -198,24 +171,12 @@ async function initDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         description TEXT,
-        color VARCHAR(7) DEFAULT '#3B82F6',
         workspace_id INT NULL,
-        owner_id INT NOT NULL,
         created_by INT NOT NULL,
-        is_personal BOOLEAN DEFAULT TRUE,
-        status ENUM('pending', 'active', 'completed', 'archived') DEFAULT 'active',
-        project_type ENUM('TRADITIONAL', 'AGILE', 'KANBAN') DEFAULT 'TRADITIONAL',
-        estimated_hours DECIMAL(10,2) NULL,
-        actual_hours DECIMAL(10,2) DEFAULT 0.00,
-        budget DECIMAL(12,2) NULL,
-        hourly_rate DECIMAL(10,2) NULL,
-        template_id INT NULL,
-        settings JSON NULL,
         is_archived BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
-        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
       )
     `);

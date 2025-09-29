@@ -6,7 +6,7 @@ import {
   getPublicUserService,
   deleteUserService
 } from '../services/userService.js';
-import { getOnlineUsers } from '../utils/socketUtils.js';
+import { getOnlineUsers } from '../socket/socketHandler.js';
 
 export const getCurrentUser = async (req, res, next) => {
   try {

@@ -12,19 +12,6 @@ const createRateLimit = (windowMs, max, message) => {
     },
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    // Don't override trust proxy - let the main app handle it
-    // trustProxy setting will be inherited from the main Express app
-    // Custom key generator that works with Render's proxy setup
-    keyGenerator: (req) => {
-      // Use the true client IP from X-Forwarded-For header
-      const forwardedFor = req.headers['x-forwarded-for'];
-      if (forwardedFor) {
-        // Take the first IP from the comma-separated list (original client IP)
-        return forwardedFor.split(',')[0].trim();
-      }
-      // Fallback to req.ip (should work with trust proxy)
-      return req.ip || req.connection.remoteAddress || 'unknown';
-    },
     handler: (req, res) => {
       res.status(429).json({
         success: false,
@@ -37,10 +24,10 @@ const createRateLimit = (windowMs, max, message) => {
 
 // Different rate limits for different endpoints
 const rateLimiters = {
-  // General API rate limit: 200 requests per 15 minutes (increased for better UX)
+  // General API rate limit: 100 requests per 15 minutes
   general: createRateLimit(
     15 * 60 * 1000, // 15 minutes
-    200,
+    100,
     'Too many requests from this IP, please try again later'
   ),
 
@@ -198,48 +185,19 @@ const corsOptions = {
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    // Get allowed origins from environment variables or use defaults
-    const frontendUrl = process.env.FRONTEND_URL || 'https://worksync-app.vercel.app';
     const allowedOrigins = process.env.ALLOWED_ORIGINS 
       ? process.env.ALLOWED_ORIGINS.split(',')
-      : [
-          'http://localhost:3100', 
-          'http://localhost:3000', 
-          'https://worksync-app.vercel.app',
-          'https://worksync-c.vercel.app',
-          'https://worksync-b.onrender.com',
-          frontendUrl
-        ];
+      : ['http://localhost:3100', 'http://localhost:3000'];
     
-    // Remove duplicates, filter out empty strings, and normalize trailing slashes
-    const uniqueOrigins = [...new Set(allowedOrigins.filter(url => url && url.trim()).map(url => url.replace(/\/$/, '')))];
-    
-    // Normalize the incoming origin for comparison
-    const normalizedOrigin = origin.replace(/\/$/, '');
-    
-    console.log(`Express CORS: Checking origin "${normalizedOrigin}" against allowed origins:`, uniqueOrigins);
-    
-    if (uniqueOrigins.indexOf(normalizedOrigin) !== -1) {
-      console.log(`Express CORS: ✅ Allowing origin "${origin}"`);
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      console.log(`Express CORS: ❌ Blocked origin "${origin}". Allowed origins:`, uniqueOrigins);
-      callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
+      console.log(`CORS: Blocked origin ${origin}`);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'Accept',
-    'X-Requested-With',
-    'X-Workspace-Id',
-    'Cache-Control'
-  ],
-  exposedHeaders: ['X-Total-Count'],
-  optionsSuccessStatus: 200, // For legacy browser support
-  preflightContinue: false
+  optionsSuccessStatus: 200 // For legacy browser support
 };
 
 export {

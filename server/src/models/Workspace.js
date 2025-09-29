@@ -30,10 +30,10 @@ export async function getWorkspaceById(id) {
 }
 
 // Add a user to a workspace
-export async function addUserToWorkspace(workspace_id, user_id, role = 'member') {
+export async function addUserToWorkspace(workspace_id, user_id) {
   await pool.execute(
-    'INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (?, ?, ?)',
-  sanitizeParams([workspace_id, user_id, role])
+    'INSERT INTO workspace_members (workspace_id, user_id) VALUES (?, ?)',
+  sanitizeParams([workspace_id, user_id])
   );
 }
 
@@ -65,30 +65,6 @@ export async function deleteWorkspace(id, userId) {
   sanitizeParams([id, userId])
   );
   return result.affectedRows;
-}
-
-// Check if user has permission to invite others to workspace
-export async function checkWorkspaceInvitePermission(workspace_id, user_id) {
-  const [rows] = await pool.execute(
-    `SELECT wm.role, w.created_by 
-     FROM workspace_members wm
-     JOIN workspaces w ON wm.workspace_id = w.id
-     WHERE wm.workspace_id = ? AND wm.user_id = ?`,
-    sanitizeParams([workspace_id, user_id])
-  );
-  
-  if (rows.length === 0) {
-    return { hasPermission: false, reason: 'User is not a member of this workspace' };
-  }
-  
-  const { role, created_by } = rows[0];
-  
-  // Only owners, admins, and workspace creators can invite
-  if (role === 'owner' || role === 'admin' || created_by === user_id) {
-    return { hasPermission: true };
-  }
-  
-  return { hasPermission: false, reason: 'Only workspace owners, admins, and creators can invite users' };
 }
 
 // Alias for compatibility with service imports

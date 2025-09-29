@@ -4,7 +4,6 @@ import { Server } from 'socket.io';
 import { testConnection } from './config/database.js';
 import socketHandler from './socket/socketHandler.js';
 import YjsWebSocketServer from './socket/yjsServer.js';
-import { setSocketIOInstance } from './utils/socketUtils.js';
 
 import * as config from './config/config.js';
 // Use a random port during tests to avoid EADDRINUSE
@@ -30,41 +29,11 @@ async function startServer() {
     const server = http.createServer(app);
     io = new Server(server, {
       cors: {
-        origin: function (origin, callback) {
-          // Allow requests with no origin (mobile apps, etc.)
-          if (!origin) return callback(null, true);
-          
-          // Get allowed origins and normalize them (remove trailing slashes)
-          const frontendUrl = config.FRONTEND_URL?.replace(/\/$/, '') || 'https://worksync-app.vercel.app';
-          const allowedOrigins = [
-            'http://localhost:3100', 
-            'http://localhost:3000', 
-            'https://worksync-app.vercel.app',
-            'https://worksync-c.vercel.app',
-            frontendUrl
-          ].map(url => url.replace(/\/$/, '')); // Remove trailing slashes
-          
-          // Normalize the incoming origin (remove trailing slash)
-          const normalizedOrigin = origin.replace(/\/$/, '');
-          
-          console.log(`Socket.IO CORS: Checking origin "${normalizedOrigin}" against allowed origins:`, allowedOrigins);
-          
-          if (allowedOrigins.includes(normalizedOrigin)) {
-            console.log(`Socket.IO CORS: ✅ Allowing origin "${origin}"`);
-            callback(null, true);
-          } else {
-            console.log(`Socket.IO CORS: ❌ Blocked origin "${origin}". Allowed origins:`, allowedOrigins);
-            callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
-          }
-        },
+  origin: config.FRONTEND_URL,
         methods: ['GET', 'POST'],
-        credentials: true,
-        allowEIO3: true // Enable Engine.IO v3 compatibility if needed
+        credentials: true
       }
     });
-    
-    // Set the Socket.IO instance for use in other modules
-    setSocketIOInstance(io);
     
     socketHandler(io);
     
@@ -99,8 +68,8 @@ async function startServer() {
       });
     });
     
-    // Start recurring job logic (temporarily disabled for debugging)
-    // import('./services/recurringJob.js');
+    // Start recurring job logic
+    import('./services/recurringJob.js');
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

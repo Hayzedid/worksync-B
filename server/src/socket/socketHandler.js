@@ -3,13 +3,29 @@
 import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
 import { sanitizeParams } from '../utils/sql.js';
-import { getOnlineUsersMap, getCollaborativeSessionsMap } from '../utils/socketUtils.js';
+
+const onlineUsers = new Map(); // userId -> { socketId, userInfo, workspaceId, currentPage }
+const collaborativeSessions = new Map(); // roomId -> Set<userId>
+
+export function getOnlineUsers() {
+  return Array.from(onlineUsers.keys());
+}
+
+export function getWorkspacePresence(workspaceId) {
+  const users = [];
+  onlineUsers.forEach((userInfo, userId) => {
+    if (userInfo.workspaceId === workspaceId) {
+      users.push({
+        userId,
+        currentPage: userInfo.currentPage,
+        lastActivity: userInfo.lastActivity
+      });
+    }
+  });
+  return users;
+}
 
 export default function socketHandler(io) {
-  // Get shared state from socketUtils
-  const onlineUsers = getOnlineUsersMap();
-  const collaborativeSessions = getCollaborativeSessionsMap();
-
   // Authenticate socket connections using JWT
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token || socket.handshake.headers?.authorization?.split(' ')[1];
