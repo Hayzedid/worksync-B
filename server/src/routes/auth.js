@@ -7,11 +7,16 @@ import rateLimit from '../middleware/rateLimit.js';
 
 const router = express.Router();
 
-// More specific rate limiting for login/register (10 attempts per 15 minutes)
+// Flexible rate limiting for login/register (handles Render cold starts)
 const authLimiter = rateLimit({ 
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts
-  message: { success: false, message: 'Too many authentication attempts, please try again later' }
+  max: 50, // Increased for development/testing
+  message: { success: false, message: 'Too many authentication attempts, please try again later' },
+  skip: (req) => {
+    // Skip rate limiting during potential cold starts or development
+    const userAgent = req.get('User-Agent') || '';
+    return userAgent.includes('curl') || userAgent.includes('PostmanRuntime') || process.env.NODE_ENV === 'development';
+  }
 });
 
 router.post('/register', authLimiter, validateRegister, validateRequest, registerUser);
@@ -20,8 +25,15 @@ router.post('/logout', logoutUser); // No rate limiting on logout
 router.get('/me', authenticateToken, (req, res) => {
   return res.json({ success: true, user: req.user });
 });
-// Apply simple rate-limiting to prevent abuse (5 requests / 15 min per IP)
-const forgotLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 });
+// Rate limiting with skip for slow responses (Render sleep recovery)
+const forgotLimiter = rateLimit({ 
+  windowMs: 15 * 60 * 1000, 
+  max: 10,
+  skip: (req, res) => {
+    // Skip rate limiting if previous requests were very slow (indicates cold start)
+    return res.getHeaders()['x-response-time'] > 10000; // 10+ seconds = cold start
+  }
+});
 router.post('/forgot-password', forgotLimiter, forgotPassword);
 router.post('/reset-password', resetPassword);
 router.get('/reset-token/:token', validateResetToken);

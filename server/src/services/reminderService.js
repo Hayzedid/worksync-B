@@ -1,5 +1,5 @@
 // Smart Reminder Service for WorkSync
-// Handles email notifications for tasks and events with 24h and 1h advance notice
+// Handles email notifications for tasks and events with 24h, 1h, and 5min advance notice
 
 import cron from 'node-cron';
 import { pool } from '../config/database.js';
@@ -35,12 +35,13 @@ class ReminderService {
       const now = new Date();
       const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       const in1Hour = new Date(now.getTime() + 60 * 60 * 1000);
+      const in5Minutes = new Date(now.getTime() + 5 * 60 * 1000);
 
       // Check tasks with deadlines
-      await this.checkTaskDeadlines(now, in24Hours, in1Hour);
+      await this.checkTaskDeadlines(now, in24Hours, in1Hour, in5Minutes);
       
       // Check events
-      await this.checkEventReminders(now, in24Hours, in1Hour);
+      await this.checkEventReminders(now, in24Hours, in1Hour, in5Minutes);
       
       // Cleanup old reminder tracking
       this.cleanupOldReminders();
@@ -51,7 +52,7 @@ class ReminderService {
   }
 
   // Check task deadlines and send reminders
-  async checkTaskDeadlines(now, in24Hours, in1Hour) {
+  async checkTaskDeadlines(now, in24Hours, in1Hour, in5Minutes) {
     try {
       // Get tasks with due dates in the next 24 hours
       const [tasks] = await pool.execute(`
@@ -67,16 +68,22 @@ class ReminderService {
       for (const task of tasks) {
         const dueDate = new Date(task.due_date);
         const timeUntilDue = dueDate.getTime() - now.getTime();
+        const minutesUntilDue = Math.floor(timeUntilDue / (60 * 1000));
         const hoursUntilDue = Math.floor(timeUntilDue / (60 * 60 * 1000));
 
         // Send 24-hour reminder
         if (hoursUntilDue <= 24 && hoursUntilDue > 22) {
-          await this.sendTaskReminder(task, '24-hour', dueDate);
+          await this.sendTaskReminder(task, '24h', dueDate);
         }
         
         // Send 1-hour reminder
-        if (hoursUntilDue <= 1 && hoursUntilDue > 0) {
-          await this.sendTaskReminder(task, '1-hour', dueDate);
+        if (hoursUntilDue <= 1 && minutesUntilDue > 5) {
+          await this.sendTaskReminder(task, '1h', dueDate);
+        }
+        
+        // Send 5-minute reminder
+        if (minutesUntilDue <= 5 && minutesUntilDue > 0) {
+          await this.sendTaskReminder(task, '5min', dueDate);
         }
       }
     } catch (error) {
@@ -85,7 +92,7 @@ class ReminderService {
   }
 
   // Check event reminders
-  async checkEventReminders(now, in24Hours, in1Hour) {
+  async checkEventReminders(now, in24Hours, in1Hour, in5Minutes) {
     try {
       // Get events starting in the next 24 hours
       const [events] = await pool.execute(`
@@ -99,16 +106,22 @@ class ReminderService {
       for (const event of events) {
         const startDate = new Date(event.start_date);
         const timeUntilStart = startDate.getTime() - now.getTime();
+        const minutesUntilStart = Math.floor(timeUntilStart / (60 * 1000));
         const hoursUntilStart = Math.floor(timeUntilStart / (60 * 60 * 1000));
 
         // Send 24-hour reminder
         if (hoursUntilStart <= 24 && hoursUntilStart > 22) {
-          await this.sendEventReminder(event, '24-hour', startDate);
+          await this.sendEventReminder(event, '24h', startDate);
         }
         
         // Send 1-hour reminder
-        if (hoursUntilStart <= 1 && hoursUntilStart > 0) {
-          await this.sendEventReminder(event, '1-hour', startDate);
+        if (hoursUntilStart <= 1 && minutesUntilStart > 5) {
+          await this.sendEventReminder(event, '1h', startDate);
+        }
+        
+        // Send 5-minute reminder
+        if (minutesUntilStart <= 5 && minutesUntilStart > 0) {
+          await this.sendEventReminder(event, '5min', startDate);
         }
       }
     } catch (error) {
@@ -120,15 +133,31 @@ class ReminderService {
   async sendTaskReminder(task, reminderType, dueDate) {
     const reminderKey = `task-${task.id}-${reminderType}`;
     
-    // Check if we already sent this reminder
+    // Check if we already sent this reminder (memory cache first)
     if (this.activeReminders.has(reminderKey)) {
       return;
+    }
+    
+    // Check database to avoid duplicate reminders
+    try {
+      const [existingReminders] = await pool.execute(`
+        SELECT id FROM reminders 
+        WHERE task_id = ? AND reminder_type = ? 
+        AND sent_at > DATE_SUB(NOW(), INTERVAL 1 DAY)
+      `, sanitizeParams([task.id, reminderType]));
+      
+      if (existingReminders.length > 0) {
+        this.activeReminders.set(reminderKey, Date.now());
+        return;
+      }
+    } catch (dbError) {
+      console.error('❌ Error checking existing reminders:', dbError);
     }
 
     try {
       const userName = `${task.firstName || ''} ${task.lastName || ''}`.trim() || 'there';
       const dueDateFormatted = this.formatDate(dueDate);
-      const timeText = reminderType === '24-hour' ? '24 hours' : '1 hour';
+      const timeText = reminderType === '24h' ? '24 hours' : reminderType === '1h' ? '1 hour' : '5 minutes';
       
       const subject = `⏰ Task Reminder: "${task.title}" due in ${timeText}`;
       
@@ -155,8 +184,20 @@ class ReminderService {
         text
       });
 
-      // Mark as sent
+      // Mark as sent in memory
       this.activeReminders.set(reminderKey, Date.now());
+      
+      // Track in database
+      try {
+        await pool.execute(`
+          INSERT INTO reminders (task_id, reminder_type, sent_at) 
+          VALUES (?, ?, NOW())
+          ON DUPLICATE KEY UPDATE sent_at = NOW()
+        `, sanitizeParams([task.id, reminderType]));
+      } catch (dbError) {
+        console.error('❌ Error tracking reminder in database:', dbError);
+      }
+      
       console.log(`📧 Sent ${reminderType} task reminder for "${task.title}" to ${task.email}`);
       
     } catch (error) {
@@ -176,7 +217,7 @@ class ReminderService {
     try {
       const userName = `${event.firstName || ''} ${event.lastName || ''}`.trim() || 'there';
       const startDateFormatted = this.formatDate(startDate);
-      const timeText = reminderType === '24-hour' ? '24 hours' : '1 hour';
+      const timeText = reminderType === '24h' ? '24 hours' : reminderType === '1h' ? '1 hour' : '5 minutes';
       
       const subject = `📅 Event Reminder: "${event.title}" starts in ${timeText}`;
       

@@ -31,17 +31,17 @@ const rateLimiters = {
     'Too many requests from this IP, please try again later'
   ),
 
-  // Auth endpoints: 10 attempts per 15 minutes (more reasonable)
+  // Auth endpoints: 100 attempts per 15 minutes (increased for development)
   auth: createRateLimit(
     15 * 60 * 1000, // 15 minutes
-    10,
+    100,
     'Too many authentication attempts, please try again later'
   ),
 
-  // Password reset: 3 attempts per hour
+  // Password reset: 20 attempts per hour (increased for testing)
   passwordReset: createRateLimit(
     60 * 60 * 1000, // 1 hour
-    3,
+    20,
     'Too many password reset attempts, please try again later'
   ),
 
