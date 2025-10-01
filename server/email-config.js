@@ -7,8 +7,8 @@ import nodemailer from 'nodemailer';
 const gmailConfig = {
   service: 'gmail',
   auth: {
-    user: 'your-email@gmail.com', // Replace with your Gmail
-    pass: 'your-app-password'      // Replace with your Gmail App Password
+    user: process.env.GMAIL_USER,     // Gmail address from environment variable
+    pass: process.env.GMAIL_APP_PASS  // App Password from environment variable
   }
 };
 

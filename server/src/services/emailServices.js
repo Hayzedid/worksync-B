@@ -33,8 +33,8 @@ function createTransporter() {
     return null;
   }
 
-  if (emailConfig.auth.pass === 'your-app-password' || 
-      emailConfig.auth.pass === 'your-app-password-here' || 
+  if (emailConfig.auth.pass === 'dummy-password' || 
+      emailConfig.auth.pass === 'your-password-here' || 
       emailConfig.auth.pass.length < 10) {
     console.log('[EmailService] ⚠️  Default/invalid app password detected - using dummy mode');
     console.log('[EmailService] 💡 Please set up a Gmail App Password in your .env file');

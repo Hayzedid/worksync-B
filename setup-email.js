@@ -16,11 +16,11 @@ const envContent = `# Gmail Configuration for WorkSync Newsletter
 # Replace these with your actual Gmail credentials
 
 # Your Gmail address
-EMAIL_USER=your-email@gmail.com
+EMAIL_USER=iazeez775@gmail.com
 
 # Your Gmail App Password (16 characters)
 # Get this from: https://myaccount.google.com/security
-EMAIL_PASS=your-app-password
+EMAIL_PASS=tbqc islp plrl eklw
 
 # Email sender information
 EMAIL_FROM=WorkSync <noreply@worksync.ng>
