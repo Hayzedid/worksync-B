@@ -39,8 +39,10 @@ function shapeEvent(row) {
 }
 
 export const create = async (req, res) => {
+  console.log('[Event Create] Request body:', req.body);
+  console.log('[Event Create] Auth user:', req.user);
   const { title, start, end, all_day, location, description, workspace_id, project_id, category } = req.body || {};
-  const ownerId = req.user.id;
+  const ownerId = req.user?.id;
 
   if (!title || !start || !end) {
     return res.status(400).json({ message: 'Missing required fields: title, start, end' });

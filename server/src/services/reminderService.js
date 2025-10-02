@@ -3,7 +3,7 @@
 
 import cron from 'node-cron';
 import { pool } from '../config/database.js';
-import emailService from './emailService.js';
+import { sendReminderEmail } from './emailServices.js';
 import { sanitizeParams } from '../utils/sql.js';
 
 class ReminderService {
@@ -177,12 +177,13 @@ class ReminderService {
         taskId: task.id
       });
 
-      await emailService.sendEmail({
-        to: task.email,
-        subject,
-        html,
-        text
-      });
+      await sendReminderEmail(task.email, {
+        title: task.title,
+        description: task.description,
+        dueDate: task.due_date,
+        priority: task.priority,
+        workspaceName: task.workspace_name
+      }, 'task');
 
       // Mark as sent in memory
       this.activeReminders.set(reminderKey, Date.now());
@@ -238,12 +239,12 @@ class ReminderService {
         eventId: event.id
       });
 
-      await emailService.sendEmail({
-        to: event.email,
-        subject,
-        html,
-        text
-      });
+      await sendReminderEmail(event.email, {
+        title: event.title,
+        description: event.description,
+        startDate: event.start_date,
+        category: event.category
+      }, 'event');
 
       // Mark as sent
       this.activeReminders.set(reminderKey, Date.now());

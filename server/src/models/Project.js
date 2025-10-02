@@ -40,11 +40,44 @@ export const createNewProject = async ({ userId, name, description, status, work
 };
 
 export const updateProjectById = async ({ id, userId, name, description, status, workspace_id }) => {
-  console.log('Status to update:', status);
-  const [result] = await pool.execute(
-    'UPDATE projects SET name = ?, description = ?, status = ?, workspace_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND created_by = ?',
-  sanitizeParams([name, description, status, workspace_id, id, userId])
-  );
+  console.log('Update project params:', { id, userId, name, description, status, workspace_id });
+  
+  // Build SET clause dynamically based on provided fields
+  const updates = [];
+  const params = [];
+  
+  if (status !== undefined) {
+    updates.push('status = ?');
+    params.push(status);
+  }
+  if (name !== undefined) {
+    updates.push('name = ?');
+    params.push(name);
+  }
+  if (description !== undefined) {
+    updates.push('description = ?');
+    params.push(description);
+  }
+  if (workspace_id !== undefined) {
+    updates.push('workspace_id = ?');
+    params.push(workspace_id);
+  }
+  
+  // Always add updated_at
+  updates.push('updated_at = CURRENT_TIMESTAMP');
+  
+  // If no fields to update, return early
+  if (updates.length === 0) {
+    throw new Error('No fields provided for update');
+  }
+  
+  // Add WHERE clause parameters
+  params.push(id, userId);
+  
+  const sql = `UPDATE projects SET ${updates.join(', ')} WHERE id = ? AND created_by = ?`;
+  console.log('Update SQL:', sql);
+  
+  const [result] = await pool.execute(sql, sanitizeParams(params));
   return result.affectedRows;
 };
 

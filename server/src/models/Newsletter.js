@@ -1,5 +1,5 @@
 import { pool } from '../config/database.js';
-import emailService from '../services/emailService.js';
+import { sendWelcomeEmail } from '../services/emailServices.js';
 
 class Newsletter {
   // Subscribe a new email to the newsletter
@@ -180,7 +180,7 @@ class Newsletter {
   static async sendWelcomeEmail(email, subscriberData = {}) {
     try {
       // Send welcome email using email service
-      const result = await emailService.sendWelcomeEmail(email, subscriberData);
+      const result = await sendWelcomeEmail(email, subscriberData);
 
       // Update subscriber's email count
       await pool.execute(

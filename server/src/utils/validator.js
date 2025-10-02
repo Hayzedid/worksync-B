@@ -70,7 +70,7 @@ export const validateTaskUpdate = [
     }
     return true;
   }),
-  body('priority').optional().isIn(['low', 'medium', 'high']),
+  body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
   body('description').optional().isString(),
   body('due_date').optional().isISO8601().toDate(),
   body('project_id').optional().isInt(),
