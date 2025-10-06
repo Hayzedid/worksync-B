@@ -10,12 +10,14 @@ const router = express.Router();
 // Flexible rate limiting for login/register (handles Render cold starts)
 const authLimiter = rateLimit({ 
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Increased for development/testing
+  max: 200, // Much higher limit for testing
   message: { success: false, message: 'Too many authentication attempts, please try again later' },
   skip: (req) => {
     // Skip rate limiting during potential cold starts or development
     const userAgent = req.get('User-Agent') || '';
-    return userAgent.includes('curl') || userAgent.includes('PostmanRuntime') || process.env.NODE_ENV === 'development';
+    // Also skip if we're testing from localhost or if it's production testing
+    const isLocalhost = req.ip === '127.0.0.1' || req.ip === '::1' || req.ip?.includes('localhost');
+    return userAgent.includes('curl') || userAgent.includes('PostmanRuntime') || process.env.NODE_ENV === 'development' || isLocalhost;
   }
 });
 
