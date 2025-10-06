@@ -10,7 +10,7 @@ const router = express.Router();
 // Flexible rate limiting for login/register (handles Render cold starts)
 const authLimiter = rateLimit({ 
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Much higher limit for testing
+  max: 2000, // Much higher limit for testing
   message: { success: false, message: 'Too many authentication attempts, please try again later' },
   skip: (req) => {
     // Skip rate limiting during potential cold starts or development
