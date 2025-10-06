@@ -220,15 +220,17 @@ export async function assignTaskToUser(taskId, userId) {
 }
 
 export async function getRecurringTasks() {
-  const [rows] = await pool.execute('SELECT * FROM tasks WHERE recurrence IS NOT NULL');
-  return rows;
+  // Note: recurrence column doesn't exist in current schema
+  // Return empty array for now - could be implemented later if needed
+  return [];
 }
 
 export async function createTaskInstance(task) {
   // Example: create a new task based on the recurring task
+  // Note: recurrence column doesn't exist in current schema
   await pool.execute(
-    'INSERT INTO tasks (title, description, assigned_to, created_by, recurrence, due_date, priority, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-  sanitizeParams([task.title, task.description, task.assigned_to, task.created_by, task.recurrence, task.due_date, task.priority, 'pending'])
+    'INSERT INTO tasks (title, description, assigned_to, created_by, due_date, priority, status, workspace_id, project_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  sanitizeParams([task.title, task.description, task.assigned_to, task.created_by, task.due_date, task.priority, 'todo', task.workspace_id, task.project_id])
   );
 }
 

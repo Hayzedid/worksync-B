@@ -6,7 +6,7 @@ export async function getUserNotifications(user_id, workspace_id = null) {
   let params = [user_id];
   
   if (workspace_id) {
-    query += ` AND related_workspace_id = ?`;
+    query += ` AND workspace_id = ?`;
     params.push(workspace_id);
   }
   
@@ -24,9 +24,12 @@ export async function markNotificationRead(id, user_id) {
 }
 
 export async function createNotification({ user_id, type, title, message, related_id, related_type, workspace_id = null }) {
+  // Handle nullable workspace_id - if null, use a default value or make it required
+  const finalWorkspaceId = workspace_id || 1; // Default to workspace 1 if not provided
+  
   const [result] = await pool.execute(
-    `INSERT INTO notifications (user_id, type, title, message, related_id, related_type, related_workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  sanitizeParams([user_id, type, title, message, related_id, related_type, workspace_id])
+    `INSERT INTO notifications (user_id, type, title, message, entity_id, entity_type, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    sanitizeParams([user_id, type, title, message, related_id, related_type, finalWorkspaceId])
   );
   return result.insertId;
 }

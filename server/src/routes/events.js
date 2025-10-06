@@ -1,11 +1,11 @@
 // routes/eventRoutes.js
 import express from 'express'
 import * as eventController from '../controllers/eventController.js'
-import authenticateToken from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.use(authenticateToken)
+// Authentication is already applied at the app level
+// router.use(authenticateToken)
 
 router.post('/', eventController.validateEvent, eventController.validateRequest, eventController.create)
 router.get('/', eventController.getAll)

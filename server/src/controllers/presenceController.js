@@ -76,16 +76,15 @@ export const updateUserPresence = async (req, res) => {
     const { workspaceId, currentPage, activity } = req.body;
     const userId = req.user.id;
 
-  await pool.execute(`
-      INSERT INTO user_presence (user_id, workspace_id, current_page, last_activity, is_online, session_data)
-      VALUES (?, ?, ?, NOW(), true, ?)
+    await pool.execute(`
+      INSERT INTO user_presence (user_id, current_page, last_activity_at, status, current_project_id)
+      VALUES (?, ?, NOW(), 'ONLINE', ?)
       ON DUPLICATE KEY UPDATE
-      workspace_id = VALUES(workspace_id),
       current_page = VALUES(current_page),
-      last_activity = VALUES(last_activity),
-      is_online = VALUES(is_online),
-      session_data = VALUES(session_data)
-    `, [userId, workspaceId, currentPage, JSON.stringify({ activity })]);
+      last_activity_at = VALUES(last_activity_at),
+      status = VALUES(status),
+      current_project_id = VALUES(current_project_id)
+    `, [userId, currentPage, workspaceId]);
 
     res.json({
       success: true,

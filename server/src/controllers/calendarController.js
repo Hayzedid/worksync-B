@@ -10,8 +10,10 @@ export async function getCalendar(req, res, next) {
       [userId, start, end]
     );
     // Fetch events
+    // Use owner_id for production compatibility (created_by for local)
+    const userColumn = process.env.NODE_ENV === 'production' ? 'owner_id' : 'created_by';
     const [events] = await pool.execute(
-      `SELECT * FROM events WHERE owner_id = ? AND start_date BETWEEN ? AND ?`,
+      `SELECT * FROM events WHERE ${userColumn} = ? AND start_date BETWEEN ? AND ?`,
       [userId, start, end]
     );
     res.json({ success: true, tasks, events });

@@ -54,10 +54,9 @@ export default function socketHandler(io) {
 
     // Update user online status in database
     try {
-      // Set workspace_id to 1 as default for now (you can modify this based on actual workspace context)
       await pool.execute(
-        'INSERT INTO user_presence (user_id, workspace_id, is_online, last_activity) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE is_online = ?, last_activity = NOW()',
-        sanitizeParams([userId, 1, true, true])
+        'INSERT INTO user_presence (user_id, status, last_activity_at, socket_id) VALUES (?, ?, NOW(), ?) ON DUPLICATE KEY UPDATE status = ?, last_activity_at = NOW(), socket_id = ?',
+        sanitizeParams([userId, 'ONLINE', socket.id, 'ONLINE', socket.id])
       );
     } catch (error) {
       console.error('Failed to update user online status:', error);
@@ -81,15 +80,15 @@ export default function socketHandler(io) {
         });
 
         // Update database presence
-    await pool.execute(`
-          INSERT INTO user_presence (user_id, workspace_id, current_page, last_activity, is_online)
-          VALUES (?, ?, ?, NOW(), true)
+        await pool.execute(`
+          INSERT INTO user_presence (user_id, current_page, last_activity_at, status, socket_id)
+          VALUES (?, ?, NOW(), 'ONLINE', ?)
           ON DUPLICATE KEY UPDATE
-          workspace_id = VALUES(workspace_id),
           current_page = VALUES(current_page),
-          last_activity = VALUES(last_activity),
-          is_online = VALUES(is_online)
-    `, sanitizeParams([userId, workspaceId, currentPage]));
+          last_activity_at = VALUES(last_activity_at),
+          status = VALUES(status),
+          socket_id = VALUES(socket_id)
+        `, sanitizeParams([userId, currentPage, socket.id]));
 
         // Join workspace room
         socket.join(`workspace:${workspaceId}`);
@@ -116,7 +115,7 @@ export default function socketHandler(io) {
 
         // Update database
           await pool.execute(
-            'UPDATE user_presence SET is_online = false, last_activity = NOW() WHERE user_id = ?',
+            'UPDATE user_presence SET status = "OFFLINE", last_activity_at = NOW() WHERE user_id = ?',
             sanitizeParams([userId])
           );
 
@@ -145,8 +144,8 @@ export default function socketHandler(io) {
           
           // Update database
             await pool.execute(
-              'UPDATE user_presence SET last_activity = NOW(), session_data = ? WHERE user_id = ?',
-              sanitizeParams([JSON.stringify({ activity, metadata }), userId])
+              'UPDATE user_presence SET last_activity_at = NOW() WHERE user_id = ?',
+              sanitizeParams([userId])
             );
 
           // Broadcast activity to workspace
@@ -508,7 +507,7 @@ export default function socketHandler(io) {
         // Update user presence status
         try {
           await pool.execute(
-            'UPDATE user_presence SET is_online = false, last_activity = NOW() WHERE user_id = ?',
+            'UPDATE user_presence SET status = "OFFLINE", last_activity_at = NOW(), socket_id = NULL WHERE user_id = ?',
             sanitizeParams([userId])
           );
         } catch (dbError) {

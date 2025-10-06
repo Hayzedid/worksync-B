@@ -56,13 +56,14 @@ class ReminderService {
     try {
       // Get tasks with due dates in the next 24 hours
       const [tasks] = await pool.execute(`
-        SELECT t.*, u.email, u.firstName, u.lastName 
+        SELECT t.*, u.email, u.first_name, u.last_name 
         FROM tasks t
-        JOIN users u ON t.user_id = u.id
+        JOIN users u ON t.assigned_to = u.id
         WHERE t.due_date IS NOT NULL 
         AND t.due_date BETWEEN ? AND ?
         AND t.status != 'done'
         AND u.email IS NOT NULL
+        AND t.email_reminders = 1
       `, sanitizeParams([now.toISOString(), in24Hours.toISOString()]));
 
       for (const task of tasks) {
@@ -96,9 +97,9 @@ class ReminderService {
     try {
       // Get events starting in the next 24 hours
       const [events] = await pool.execute(`
-        SELECT e.*, u.email, u.firstName, u.lastName 
+        SELECT e.*, u.email, u.first_name, u.last_name 
         FROM events e
-        JOIN users u ON e.user_id = u.id
+        JOIN users u ON e.created_by = u.id
         WHERE e.start_date BETWEEN ? AND ?
         AND u.email IS NOT NULL
       `, sanitizeParams([now.toISOString(), in24Hours.toISOString()]));
@@ -155,7 +156,7 @@ class ReminderService {
     }
 
     try {
-      const userName = `${task.firstName || ''} ${task.lastName || ''}`.trim() || 'there';
+      const userName = `${task.first_name || ''} ${task.last_name || ''}`.trim() || 'there';
       const dueDateFormatted = this.formatDate(dueDate);
       const timeText = reminderType === '24h' ? '24 hours' : reminderType === '1h' ? '1 hour' : '5 minutes';
       
@@ -216,7 +217,7 @@ class ReminderService {
     }
 
     try {
-      const userName = `${event.firstName || ''} ${event.lastName || ''}`.trim() || 'there';
+      const userName = `${event.first_name || ''} ${event.last_name || ''}`.trim() || 'there';
       const startDateFormatted = this.formatDate(startDate);
       const timeText = reminderType === '24h' ? '24 hours' : reminderType === '1h' ? '1 hour' : '5 minutes';
       

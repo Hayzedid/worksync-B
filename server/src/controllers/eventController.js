@@ -80,7 +80,7 @@ export const create = async (req, res) => {
       title,
       start_date: startDT,
       end_date: endDT,
-      owner_id: ownerId,
+      created_by: ownerId,
       all_day: allDay,
       location: location ?? null,
       description: description ?? null,
@@ -96,10 +96,12 @@ export const create = async (req, res) => {
 
 export const getAll = async (req, res, next) => {
   try {
+    console.log('getAll events called for user:', req.user?.id);
     const events = await Event.getAllEventsByUser(req.user.id)
+    console.log('Found events:', events.length);
     res.json({ success: true, events: events.map(shapeEvent) })
   } catch (err) {
-     next(err);
+    console.error('Error fetching events:', err);
     res.status(500).json({ success: false, message: 'Server error', error: err.message })
   }
 }
@@ -110,14 +112,14 @@ export const getById = async (req, res, next) => {
     if (!event) return res.status(404).json({ success: false, message: 'Event not found' })
     res.json({ success: true, event: shapeEvent(event) })
   } catch (err) {
-     next(err);
+    console.error('Error fetching event by ID:', err);
     res.status(500).json({ success: false, message: 'Server error', error: err.message })
   }
 }
 
 export const update = async (req, res) => {
   const id = req.params.id;
-  const owner_id = req.user?.id;
+  const created_by = req.user?.id;
   const {
     title,
     start,
@@ -130,7 +132,7 @@ export const update = async (req, res) => {
     category,
   } = req.body || {};
 
-  if (!id || !owner_id) {
+  if (!id || !created_by) {
     return res.status(400).json({ message: 'Missing required identifiers' });
   }
 
@@ -179,7 +181,7 @@ export const update = async (req, res) => {
   }
 
   try {
-    const event = await Event.updateEventPartial(id, owner_id, patch);
+    const event = await Event.updateEventPartial(id, created_by, patch);
     return res.json({ success: true, message: 'Event updated successfully', event: shapeEvent(event) });
   } catch (err) {
     return res.status(500).json({ message: 'Server error', error: err.message });
@@ -207,6 +209,7 @@ export const remove = async (req, res, next) => {
     await Event.deleteEvent(req.params.id)
     res.json({ success: true, message: 'Event deleted successfully' })
   } catch (err) {
-    next(err);
+    console.error('Error deleting event:', err);
+    res.status(500).json({ success: false, message: 'Server error', error: err.message })
   }
 }
