@@ -86,7 +86,8 @@ async function startServer() {
     import('./services/recurringJob.js');
     
     // Start reminder service for email notifications
-    import('./services/reminderService.js');
+    const { default: reminderService } = await import('./services/reminderService.js');
+    reminderService.start();
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

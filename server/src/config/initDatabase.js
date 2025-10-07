@@ -111,6 +111,23 @@ async function initDatabase() {
       )
     `);
 
+    // Create reminders table for tracking sent reminders
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS reminders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        task_id INT NULL,
+        event_id INT NULL,
+        reminder_type VARCHAR(10) NOT NULL,
+        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        email_sent_to VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+        INDEX idx_task_reminder (task_id, reminder_type),
+        INDEX idx_event_reminder (event_id, reminder_type),
+        INDEX idx_sent_at (sent_at)
+      )
+    `);
+
     // Create notifications table
     await pool.execute(`
       CREATE TABLE IF NOT EXISTS notifications (
@@ -213,6 +230,7 @@ async function initDatabase() {
         actual_hours DECIMAL(5,2),
         position INT DEFAULT 0,
         workspace_id INT,
+        email_reminders BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
