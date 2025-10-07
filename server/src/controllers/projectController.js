@@ -8,7 +8,19 @@ export const updateProject = async (req, res, next) => {
       userId: req.user.id,
       ...req.body
     };
-    // ...existing update logic here...
+    
+    // Normalize status if provided
+    if (updateData.status) {
+      updateData.status = normalizeStatus(updateData.status);
+    }
+    
+    const updatedProject = await updateProjectService(updateData);
+    
+    if (!updatedProject) {
+      return res.status(404).json({ success: false, message: 'Project not found or no changes made' });
+    }
+    
+    res.json({ success: true, message: 'Project updated successfully', project: updatedProject });
   } catch (err) {
     next(err);
   }

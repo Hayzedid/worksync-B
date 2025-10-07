@@ -25,7 +25,17 @@ router.post('/register', authLimiter, validateRegister, validateRequest, registe
 router.post('/login', authLimiter, validateLogin, validateRequest, loginUser);
 router.post('/logout', logoutUser); // No rate limiting on logout
 router.get('/me', authenticateToken, (req, res) => {
-  return res.json({ success: true, user: req.user });
+  // Transform database field names to match frontend expectations
+  const user = {
+    id: req.user.id,
+    email: req.user.email,
+    firstName: req.user.first_name,
+    lastName: req.user.last_name,
+    is_active: req.user.is_active,
+    // Add computed name field for convenience
+    name: `${req.user.first_name} ${req.user.last_name}`
+  };
+  return res.json({ success: true, user });
 });
 // Rate limiting with skip for slow responses (Render sleep recovery)
 const forgotLimiter = rateLimit({ 

@@ -4,7 +4,7 @@ const router = Router();
 import { getAllProjects, 
   getProject, createProject, updateProject, deleteProject, searchProjectsController,
   getProjectTasks, createProjectTask, getProjectNotes, createProjectNote } from '../controllers/projectController.js';
-import { validateProject } from '../utils/validator.js';
+import { validateProject, validateProjectUpdate } from '../utils/validator.js';
 import { validateRequest } from '../middleware/validation.js';
 import { createNewTask, getTasksByProject } from '../controllers/taskController.js';
 import { create_Note } from '../controllers/noteController.js';
@@ -19,8 +19,8 @@ router.get('/', getAllProjects);
 router.get('/search', searchProjectsController);
 router.get('/:id', getProject);
 router.post('/', validateProject, validateRequest, createProject);
-router.put('/:id', validateProject, validateRequest, updateProject);
-router.patch('/:id', validateProject, validateRequest, updateProject);
+router.put('/:id', validateProjectUpdate, validateRequest, updateProject);
+router.patch('/:id', validateProjectUpdate, validateRequest, updateProject);
 router.delete('/:id', deleteProject);
 
 // Nested task routes under a project

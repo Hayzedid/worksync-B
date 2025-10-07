@@ -11,30 +11,31 @@ router.get('/', getAllActivities);
 // Align with test expecting /api/activity
 router.get('/activity', async (req, res, next) => {
   try {
-    // Get user's workspace from workspace_members table or default to first workspace
     const { pool } = await import('../config/database.js');
     
-    // Try to find user's workspace
-    const [userWorkspaces] = await pool.execute(
-      'SELECT workspace_id FROM workspace_members WHERE user_id = ? LIMIT 1',
-      [req.user.id]
-    );
+    console.log('Activity API called for user:', req.user.id);
     
-    let workspaceId = 1; // default fallback
+    // Get recent activity from comments table (where activity data is actually stored)
+    const [activities] = await pool.execute(`
+      SELECT 
+        id,
+        content,
+        entity_type as commentable_type,
+        entity_id as commentable_id,
+        user_id,
+        created_at
+      FROM comments 
+      WHERE user_id = ? 
+      ORDER BY created_at DESC 
+      LIMIT 10
+    `, [req.user.id]);
     
-    if (userWorkspaces.length > 0) {
-      workspaceId = userWorkspaces[0].workspace_id;
-    } else {
-      // If no workspace membership, get the first available workspace
-      const [workspaces] = await pool.execute('SELECT id FROM workspaces ORDER BY id LIMIT 1');
-      if (workspaces.length > 0) {
-        workspaceId = workspaces[0].id;
-      }
-    }
+    console.log('Found activities:', activities.length);
+    console.log('Activities data:', activities);
     
-    req.params.id = workspaceId;
-    return getActivityFeed(req, res, next);
+    res.json({ success: true, activities });
   } catch (error) {
+    console.error('Activity API error:', error);
     next(error);
   }
 });

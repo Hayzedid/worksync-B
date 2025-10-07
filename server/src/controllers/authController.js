@@ -37,9 +37,32 @@ export const registerUser = async (req, res, next) => {
       sanitizeParams([email.toLowerCase(), hashedPassword, firstName, lastName, userName])
     );
 
+    // Create user object for token generation
+    const newUser = {
+      id: result.insertId,
+      email: email.toLowerCase(),
+      first_name: firstName,
+      last_name: lastName,
+      username: userName
+    };
+
+    // Generate JWT token
+    const token = generateToken(newUser);
+
+    // Set cookie for frontend authentication
+    const { NODE_ENV } = await import('../config/config.js');
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: NODE_ENV === 'production' ? true : false,
+      sameSite: NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
+      token,
+      accessToken: token,
       user: {
         id: result.insertId,
         email: email.toLowerCase(),

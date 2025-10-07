@@ -8,10 +8,17 @@ export const validateComment = [
   body('commentable_id').optional().isInt(),
   body('parent_id').optional().isInt()
 ];
-// Project validation
+// Project validation for creation
 export const validateProject = [
   body('name').notEmpty().withMessage('Project name is required'),
   body('description').optional().isString(),
+];
+
+// Project validation for updates (all fields optional)
+export const validateProjectUpdate = [
+  body('name').optional().notEmpty().withMessage('Project name cannot be empty'),
+  body('description').optional().isString(),
+  body('status').optional().isIn(['active', 'planning', 'completed', 'archived']).withMessage('Invalid status'),
 ];
 
 // Task validation for creation (requires title)

@@ -78,7 +78,13 @@ export const updateProjectById = async ({ id, userId, name, description, status,
   console.log('Update SQL:', sql);
   
   const [result] = await pool.execute(sql, sanitizeParams(params));
-  return result.affectedRows;
+  
+  if (result.affectedRows === 0) {
+    return null; // No rows updated, project not found
+  }
+  
+  // Return the updated project
+  return await getProjectById(id, userId);
 };
 
 export const deleteProjectById = async (id, userId) => {
