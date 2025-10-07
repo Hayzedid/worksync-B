@@ -48,6 +48,14 @@ import searchRoutes from './routes/search.js';
 
 const app = express();
 
+// Trust proxy for proper client IP detection on Render/Heroku/etc
+// This fixes rate limiting issues with X-Forwarded-For headers
+if (NODE_ENV === 'production') {
+  app.set('trust proxy', 1); // Trust first proxy (Render, Heroku, etc.)
+} else {
+  app.set('trust proxy', true); // Trust all proxies in development
+}
+
 // Production security headers (must be first)
 app.use(securityHeaders);
 

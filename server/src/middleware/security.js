@@ -12,6 +12,9 @@ const createRateLimit = (windowMs, max, message) => {
     },
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    // Skip rate limiting validation errors in production proxy environments
+    skipFailedRequests: true,
+    skipSuccessfulRequests: false,
     handler: (req, res) => {
       res.status(429).json({
         success: false,
