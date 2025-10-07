@@ -26,7 +26,8 @@ export async function uploadAttachment(req, res, next) {
 export async function getAttachments(req, res, next) {
   try {
     const { id } = req.params;
-    const isTask = req.baseUrl.includes('/tasks');
+    // Check both baseUrl and route path to determine if it's a task or note
+    const isTask = req.baseUrl.includes('/tasks') || req.route.path.includes('/task');
     const attachments = isTask
       ? await getAttachmentsForTask(id)
       : await getAttachmentsForNote(id);
