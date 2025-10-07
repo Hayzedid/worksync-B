@@ -234,28 +234,70 @@ export async function createTaskInstance(task) {
   );
 }
 
-export async function searchTasks({ userId, q, status, priority, assigned_to }) {
-  let sql = `SELECT * FROM tasks WHERE created_by = ?`;
-  const params = [userId];
-  if (q) {
-    sql += ' AND MATCH(title, description) AGAINST (? IN NATURAL LANGUAGE MODE)';
-    params.push(q);
+export async function searchTasks({ userId, q, status, priority, assigned_to, workspace_id, project_id }) {
+  let sql = `
+    SELECT t.*, 
+           p.name AS project_name, 
+           w.name AS workspace_name,
+           u1.first_name AS creator_first_name,
+           u1.last_name AS creator_last_name,
+           u2.first_name AS assignee_first_name,
+           u2.last_name AS assignee_last_name
+    FROM tasks t
+    LEFT JOIN projects p ON t.project_id = p.id
+    LEFT JOIN workspaces w ON t.workspace_id = w.id  
+    LEFT JOIN users u1 ON t.created_by = u1.id
+    LEFT JOIN users u2 ON t.assigned_to = u2.id
+    WHERE (t.created_by = ? OR t.assigned_to = ?)
+  `;
+  const params = [userId, userId];
+  
+  // Text search across title and description using LIKE (works without FULLTEXT indexes)
+  if (q && q.trim()) {
+    const searchTerm = `%${q.trim()}%`;
+    sql += ' AND (t.title LIKE ? OR t.description LIKE ?)';
+    params.push(searchTerm, searchTerm);
   }
-  if (status) {
-    sql += ' AND status = ?';
+  
+  // Filter by status
+  if (status && status !== 'all') {
+    sql += ' AND t.status = ?';
     params.push(status);
   }
-  if (priority) {
-    sql += ' AND priority = ?';
+  
+  // Filter by priority  
+  if (priority && priority !== 'all') {
+    sql += ' AND t.priority = ?';
     params.push(priority);
   }
-  if (assigned_to) {
-    sql += ' AND assigned_to = ?';
+  
+  // Filter by assigned user
+  if (assigned_to && assigned_to !== 'all') {
+    sql += ' AND t.assigned_to = ?';
     params.push(assigned_to);
   }
-  sql += ' ORDER BY created_at DESC';
-  const [rows] = await pool.execute(sql, params);
-  return rows;
+  
+  // Filter by workspace
+  if (workspace_id && workspace_id !== 'all') {
+    sql += ' AND t.workspace_id = ?';
+    params.push(workspace_id);
+  }
+  
+  // Filter by project
+  if (project_id && project_id !== 'all') {
+    sql += ' AND t.project_id = ?';
+    params.push(project_id);
+  }
+  
+  sql += ' ORDER BY t.updated_at DESC, t.created_at DESC LIMIT 100';
+  
+  try {
+    const [rows] = await pool.execute(sql, params);
+    return rows;
+  } catch (error) {
+    console.error('Error in searchTasks:', error);
+    throw error;
+  }
 }
 
 export async function addTaskDependency(task_id, blocked_by_task_id) {

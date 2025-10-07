@@ -132,15 +132,67 @@ export async function searchNotesController(req, res, next) {
   try {
     const { q, project_id, workspace_id } = req.query;
     const userId = req.user.id;
-    const cacheKey = `${userId}:${q || ''}:${project_id || ''}:${workspace_id || ''}`;
+    
+    // Parse parameters
+    let parsedProjectId = project_id;
+    let parsedWorkspaceId = workspace_id;
+    
+    if (project_id && project_id !== 'all') {
+      parsedProjectId = parseInt(project_id, 10);
+      if (!Number.isFinite(parsedProjectId)) {
+        parsedProjectId = undefined;
+      }
+    } else {
+      parsedProjectId = undefined;
+    }
+    
+    if (workspace_id && workspace_id !== 'all') {
+      parsedWorkspaceId = parseInt(workspace_id, 10);
+      if (!Number.isFinite(parsedWorkspaceId)) {
+        parsedWorkspaceId = undefined;
+      }
+    } else {
+      parsedWorkspaceId = undefined;
+    }
+    
+    // Create cache key
+    const cacheKey = `notes:${userId}:${q || ''}:${parsedProjectId || 'all'}:${parsedWorkspaceId || 'all'}`;
+    
+    // Check cache first
     const cached = getCachedSearchNotes(cacheKey);
     if (cached) {
-      return res.json({ success: true, notes: cached, cached: true });
+      return res.json({ 
+        success: true, 
+        notes: cached, 
+        count: cached.length,
+        cached: true,
+        query: { q, project_id: parsedProjectId, workspace_id: parsedWorkspaceId }
+      });
     }
-    const notes = await searchNotes({ userId, q, project_id, workspace_id });
+    
+    // Perform search
+    const notes = await searchNotes({ 
+      userId, 
+      q, 
+      project_id: parsedProjectId, 
+      workspace_id: parsedWorkspaceId 
+    });
+    
+    // Cache results for 5 minutes
     setCachedSearchNotes(cacheKey, notes);
-    res.json({ success: true, notes, cached: false });
+    setTimeout(() => {
+      getCachedSearchNotes(cacheKey) && setCachedSearchNotes(cacheKey, null);
+    }, 5 * 60 * 1000);
+    
+    res.json({ 
+      success: true, 
+      notes, 
+      count: notes.length,
+      cached: false,
+      query: { q, project_id: parsedProjectId, workspace_id: parsedWorkspaceId }
+    });
   } catch (error) {
+    console.error('Error in searchNotesController:', error);
     next(error);
   }
 }

@@ -313,17 +313,41 @@ export async function assignTask(req, res, next) {
 
 export async function searchTasksController(req, res, next) {
   try {
-    const { q, status, priority, assigned_to } = req.query;
+    const { q, status, priority, assigned_to, workspace_id, project_id } = req.query;
     const userId = req.user.id;
-    const cacheKey = `${userId}:${q || ''}:${status || ''}:${priority || ''}:${assigned_to || ''}`;
+    
+    // Create cache key including all search parameters
+    const cacheKey = `${userId}:${q || ''}:${status || ''}:${priority || ''}:${assigned_to || ''}:${workspace_id || ''}:${project_id || ''}`;
+    
+    // Check cache first (optional - can disable for development)
     const cached = getCachedSearchTasks(cacheKey);
-    if (cached) {
-      return res.json({ success: true, tasks: cached, cached: true });
+    if (cached && process.env.NODE_ENV === 'production') {
+      return res.json({ success: true, tasks: cached, cached: true, count: cached.length });
     }
-    const tasks = await searchTasks({ userId, q, status, priority, assigned_to });
+    
+    // Perform search
+    const tasks = await searchTasks({ 
+      userId, 
+      q, 
+      status, 
+      priority, 
+      assigned_to, 
+      workspace_id, 
+      project_id 
+    });
+    
+    // Cache results
     setCachedSearchTasks(cacheKey, tasks);
-    res.json({ success: true, tasks, cached: false });
+    
+    res.json({ 
+      success: true, 
+      tasks, 
+      cached: false, 
+      count: tasks.length,
+      query: { q, status, priority, assigned_to, workspace_id, project_id }
+    });
   } catch (error) {
+    console.error('Error in searchTasksController:', error);
     next(error);
   }
 }

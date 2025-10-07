@@ -133,19 +133,48 @@ export const deleteProject = async (req, res, next) => {
 
 export async function searchProjectsController(req, res, next) {
   try {
-    const { q } = req.query;
-    let { status } = req.query;
-    const wsParam = req.query.workspace_id ?? req.query.ws;
-    const workspaceId = wsParam ? parseInt(wsParam, 10) : undefined;
-    if (status) {
-      const synonyms = { on_hold: 'archived', planned: 'planning' };
-      status = String(status).toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
-      status = synonyms[status] || status;
-    }
+    const { q, status, workspace_id } = req.query;
     const userId = req.user.id;
-    const projects = await searchProjects({ userId, q, status, workspaceId: Number.isFinite(workspaceId) ? workspaceId : undefined });
-    res.json({ success: true, projects });
+    
+    // Parse workspace_id
+    let workspaceId = workspace_id;
+    if (workspace_id && workspace_id !== 'all') {
+      workspaceId = parseInt(workspace_id, 10);
+      if (!Number.isFinite(workspaceId)) {
+        workspaceId = undefined;
+      }
+    } else {
+      workspaceId = undefined;
+    }
+    
+    // Normalize status
+    let normalizedStatus = status;
+    if (status && status !== 'all') {
+      const synonyms = { 
+        on_hold: 'archived', 
+        planned: 'planning',
+        in_progress: 'active'
+      };
+      normalizedStatus = String(status).toLowerCase().replace(/\s+/g, '_').replace(/-/g, '_');
+      normalizedStatus = synonyms[normalizedStatus] || normalizedStatus;
+    }
+    
+    // Perform search
+    const projects = await searchProjects({ 
+      userId, 
+      q, 
+      status: normalizedStatus, 
+      workspaceId 
+    });
+    
+    res.json({ 
+      success: true, 
+      projects,
+      count: projects.length,
+      query: { q, status: normalizedStatus, workspace_id: workspaceId }
+    });
   } catch (error) {
+    console.error('Error in searchProjectsController:', error);
     next(error);
   }
 }

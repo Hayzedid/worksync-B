@@ -99,23 +99,49 @@ export const deleteProjectById = async (id, userId) => {
 };
 
 export async function searchProjects({ userId, q, status, workspaceId }) {
-  let sql = `SELECT * FROM projects WHERE created_by = ?`;
+  let sql = `
+    SELECT p.*, 
+           w.name AS workspace_name,
+           u.first_name AS creator_first_name,
+           u.last_name AS creator_last_name,
+           COUNT(t.id) AS task_count
+    FROM projects p
+    LEFT JOIN workspaces w ON p.workspace_id = w.id
+    LEFT JOIN users u ON p.created_by = u.id
+    LEFT JOIN tasks t ON p.id = t.project_id
+    WHERE p.created_by = ?
+  `;
   const params = [userId];
-  if (workspaceId) {
-    sql += ' AND workspace_id = ?';
+  
+  // Filter by workspace
+  if (workspaceId && workspaceId !== 'all') {
+    sql += ' AND p.workspace_id = ?';
     params.push(workspaceId);
   }
-  if (q) {
-    sql += ' AND MATCH(name, description) AGAINST (? IN NATURAL LANGUAGE MODE)';
-    params.push(q);
+  
+  // Text search using LIKE (works without FULLTEXT indexes)
+  if (q && q.trim()) {
+    const searchTerm = `%${q.trim()}%`;
+    sql += ' AND (p.name LIKE ? OR p.description LIKE ?)';
+    params.push(searchTerm, searchTerm);
   }
-  if (status) {
-    sql += ' AND status = ?';
+  
+  // Filter by status
+  if (status && status !== 'all') {
+    sql += ' AND p.status = ?';
     params.push(status);
   }
-  // Order by: general projects (workspace_id IS NULL) first, then workspace projects
-  // Within each group, order by most recent created_at first
-  sql += ' ORDER BY workspace_id IS NULL DESC, created_at DESC';
-  const [rows] = await pool.execute(sql, sanitizeParams(params));
-  return rows;
+  
+  // Group by project to get task count
+  sql += ` GROUP BY p.id, w.name, u.first_name, u.last_name
+           ORDER BY p.updated_at DESC, p.created_at DESC 
+           LIMIT 50`;
+  
+  try {
+    const [rows] = await pool.execute(sql, sanitizeParams(params));
+    return rows;
+  } catch (error) {
+    console.error('Error in searchProjects:', error);
+    throw error;
+  }
 }

@@ -120,21 +120,45 @@ export async function getNotesByProject(projectId, userId) {
 }
 
 export async function searchNotes({ userId, q, project_id, workspace_id }) {
-  let sql = `SELECT * FROM notes WHERE created_by = ?`;
+  let sql = `
+    SELECT 
+      n.*,
+      p.name as project_name,
+      w.name as workspace_name,
+      u.full_name as creator_name,
+      u.email as creator_email
+    FROM notes n
+    LEFT JOIN projects p ON n.project_id = p.id
+    LEFT JOIN workspaces w ON n.workspace_id = w.id
+    LEFT JOIN users u ON n.created_by = u.id
+    WHERE n.created_by = ?
+  `;
   const params = [userId];
-  if (q) {
-    sql += ' AND MATCH(title, content) AGAINST (? IN NATURAL LANGUAGE MODE)';
-  params.push(q);
+  
+  // Add search conditions
+  if (q && q.trim()) {
+    const searchTerm = `%${q.trim()}%`;
+    sql += ` AND (
+      n.title LIKE ? OR 
+      n.content LIKE ? OR
+      p.name LIKE ? OR
+      w.name LIKE ?
+    )`;
+    params.push(searchTerm, searchTerm, searchTerm, searchTerm);
   }
-  if (project_id) {
-    sql += ' AND project_id = ?';
+  
+  if (project_id && project_id !== 'all') {
+    sql += ' AND n.project_id = ?';
     params.push(project_id);
   }
-  if (workspace_id) {
-    sql += ' AND workspace_id = ?';
+  
+  if (workspace_id && workspace_id !== 'all') {
+    sql += ' AND n.workspace_id = ?';
     params.push(workspace_id);
   }
-  sql += ' ORDER BY created_at DESC';
+  
+  sql += ' ORDER BY n.created_at DESC';
+  
   const [rows] = await pool.execute(sql, sanitizeParams(params));
   return rows;
 }

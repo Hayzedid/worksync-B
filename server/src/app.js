@@ -44,6 +44,7 @@ import attachmentRoutes from './routes/attachments.js';
 import presenceRoutes from './routes/presence.js';
 import collaborationRoutes from './routes/collaboration.js';
 import newsletterRoutes from './routes/newsletter.js';
+import searchRoutes from './routes/search.js';
 
 const app = express();
 
@@ -104,6 +105,7 @@ if (minimalRoutes) {
   app.use('/api/activity', authenticateToken, activityRoutes);
   app.use('/api/calendar', authenticateToken, calendarRoutes);
   app.use('/api/attachments', authenticateToken, rateLimiters.fileUpload, attachmentRoutes);
+  app.use('/api/search', searchRoutes);
   // Phase 2 Collaboration Routes
   app.use('/api/presence', authenticateToken, rateLimiters.realtime, presenceRoutes);
   app.use('/api/collaboration', authenticateToken, rateLimiters.realtime, collaborationRoutes);
