@@ -15,10 +15,8 @@ export const createEvent = async ({
   project_id = null,
   category = null,
 }) => {
-  // Use owner_id for production compatibility (created_by for local)
-  const userColumn = process.env.NODE_ENV === 'production' ? 'owner_id' : 'created_by';
   const sql = `
-    INSERT INTO events (title, start_date, end_date, ${userColumn}, all_day, location, description, workspace_id, project_id, category)
+    INSERT INTO events (title, start_date, end_date, created_by, all_day, location, description, workspace_id, project_id, category)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const params = [
@@ -50,9 +48,7 @@ export const createEvent = async ({
 }
 
 export const getAllEventsByUser = async (userId) => {
-  // Use owner_id for production compatibility (created_by for local)
-  const userColumn = process.env.NODE_ENV === 'production' ? 'owner_id' : 'created_by';
-  const [rows] = await pool.execute(`SELECT * FROM events WHERE ${userColumn} = ?`, sanitizeParams([userId]))
+  const [rows] = await pool.execute(`SELECT * FROM events WHERE created_by = ?`, sanitizeParams([userId]))
   return rows
 }
 
@@ -64,11 +60,9 @@ export const getEventById = async (id) => {
 export const updateEvent = async (id, title, start_date, end_date, created_by) => {
   console.log("Running SQL update with:", { id, title, start_date, end_date, created_by });
   
-  // Use owner_id for production compatibility (created_by for local)
-  const userColumn = process.env.NODE_ENV === 'production' ? 'owner_id' : 'created_by';
   await pool.execute(
-    `UPDATE events SET title = ?, start_date = ?, end_date = ?, start = ?, end = ? WHERE id = ? AND ${userColumn} = ?`,
-    sanitizeParams([title, start_date, end_date, start_date, end_date, id, created_by])
+    `UPDATE events SET title = ?, start_date = ?, end_date = ? WHERE id = ? AND created_by = ?`,
+    sanitizeParams([title, start_date, end_date, id, created_by])
   );
 
   return getEventById(id);
@@ -88,9 +82,7 @@ export const updateEventPartial = async (id, created_by, patch = {}) => {
   if (setClauses.length === 0) {
     return getEventById(id);
   }
-  // Use owner_id for production compatibility (created_by for local)
-  const userColumn = process.env.NODE_ENV === 'production' ? 'owner_id' : 'created_by';
-  const sql = `UPDATE events SET ${setClauses.join(', ')} WHERE id = ? AND ${userColumn} = ?`;
+  const sql = `UPDATE events SET ${setClauses.join(', ')} WHERE id = ? AND created_by = ?`;
   params.push(id, created_by);
   await pool.execute(sql, sanitizeParams(params));
   return getEventById(id);
@@ -116,11 +108,9 @@ export async function getRecurringEvents() {
 
 export async function createEventInstance(event) {
   // Example: create a new event based on the recurring event
-  // Use owner_id for production compatibility (created_by for local)
   // Note: recurrence column doesn't exist in current schema
-  const userColumn = process.env.NODE_ENV === 'production' ? 'owner_id' : 'created_by';
   await pool.execute(
-    `INSERT INTO events (title, description, start_date, end_date, ${userColumn}) VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO events (title, description, start_date, end_date, created_by) VALUES (?, ?, ?, ?, ?)`,
     sanitizeParams([event.title, event.description, event.start_date, event.end_date, event.created_by])
   );
 }
