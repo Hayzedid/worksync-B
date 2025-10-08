@@ -98,13 +98,31 @@ export const create = async (req, res) => {
 
 export const getAll = async (req, res, next) => {
   try {
-    console.log('getAll events called for user:', req.user?.id);
-    const events = await Event.getAllEventsByUser(req.user.id)
+    // Check if user is authenticated
+    if (!req.user || !req.user.id) {
+      console.log('Unauthenticated request to /api/events');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required',
+        error: 'No authentication token provided'
+      });
+    }
+
+    console.log('getAll events called for user:', req.user.id);
+    const events = await Event.getAllEventsByUser(req.user.id);
     console.log('Found events:', events.length);
-    res.json({ success: true, events: events.map(shapeEvent) })
+    
+    res.json({ 
+      success: true, 
+      events: events.map(shapeEvent) 
+    });
   } catch (err) {
     console.error('Error fetching events:', err);
-    res.status(500).json({ success: false, message: 'Server error', error: err.message })
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch events',
+      error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    });
   }
 }
 
