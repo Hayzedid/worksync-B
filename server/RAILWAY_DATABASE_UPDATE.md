@@ -215,3 +215,19 @@ If you encounter issues:
 ---
 
 **⚠️ Important**: Always backup your production database before running major updates!
+
+## New migration: comments polymorphic fields
+
+We added a small migration file to add missing polymorphic fields to the `comments` table if needed:
+
+Path: `server/migrations/20251008_add_comments_polymorphic.sql`
+
+Run it via Railway CLI (recommended):
+
+```bash
+cd worksync/server
+railway connect mysql
+-- paste the SQL from server/migrations/20251008_add_comments_polymorphic.sql and run
+```
+
+Or run the SQL in the Railway dashboard Query tab. After running, re-run `node ./scripts/verify-db.cjs` to confirm no missing columns remain.
