@@ -45,12 +45,12 @@ import presenceRoutes from './routes/presence.js';
 import collaborationRoutes from './routes/collaboration.js';
 import newsletterRoutes from './routes/newsletter.js';
 import searchRoutes from './routes/search.js';
+import timeTrackingRoutes from './routes/timeTracking.js';
 
 const app = express();
 
 // Trust proxy for proper client IP detection on Render/Heroku/etc
 // This fixes rate limiting issues with X-Forwarded-For headers
-if (NODE_ENV === 'production') {
   app.set('trust proxy', 1); // Trust first proxy (Render, Heroku, etc.)
 } else {
   app.set('trust proxy', true); // Trust all proxies in development
@@ -114,6 +114,8 @@ if (minimalRoutes) {
   app.use('/api/calendar', authenticateToken, calendarRoutes);
   app.use('/api/attachments', authenticateToken, rateLimiters.fileUpload, attachmentRoutes);
   app.use('/api/search', searchRoutes);
+  // Time Tracking Routes
+  app.use('/api/time-tracking', authenticateToken, timeTrackingRoutes);
   // Phase 2 Collaboration Routes
   app.use('/api/presence', authenticateToken, rateLimiters.realtime, presenceRoutes);
   app.use('/api/collaboration', authenticateToken, rateLimiters.realtime, collaborationRoutes);
