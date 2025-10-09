@@ -20,18 +20,28 @@ export const getCurrentUser = async (req, res, next) => {
 
 export const updateUserProfile = async (req, res, next) => {
   try {
-    const { username, profile_picture, name, email } = req.body;
+    const { username, profile_picture, name, email, first_name, last_name, firstName, lastName } = req.body;
     const { id } = req.user;
     
-    // Support both frontend formats: {name, email} and {username, profile_picture}
-    const finalUsername = username || name;
+    // Support multiple frontend formats and split name if provided
+    let finalFirstName = first_name || firstName;
+    let finalLastName = last_name || lastName;
+    
+    // If name is provided, split it into first and last name
+    if (name && !finalFirstName && !finalLastName) {
+      const nameParts = name.trim().split(' ');
+      finalFirstName = nameParts[0] || '';
+      finalLastName = nameParts.slice(1).join(' ') || '';
+    }
+    
+    const finalUsername = username;
     const finalEmail = email;
     
-    if (!finalUsername && !finalEmail && !profile_picture) {
+    if (!finalUsername && !finalEmail && !profile_picture && !finalFirstName && !finalLastName) {
       return res.status(400).json({ success: false, message: 'At least one field is required for update' });
     }
     
-    const updated = await updateUserService(id, finalUsername, profile_picture, finalEmail);
+    const updated = await updateUserService(id, finalUsername, profile_picture, finalEmail, finalFirstName, finalLastName);
     if (!updated) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }

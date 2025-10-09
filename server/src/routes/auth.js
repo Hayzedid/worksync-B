@@ -31,9 +31,11 @@ router.get('/me', authenticateToken, (req, res) => {
     email: req.user.email,
     firstName: req.user.first_name,
     lastName: req.user.last_name,
+    username: req.user.username,
+    userName: req.user.username, // Frontend compatibility
     is_active: req.user.is_active,
     // Add computed name field for convenience
-    name: `${req.user.first_name} ${req.user.last_name}`
+    name: `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim()
   };
   return res.json({ success: true, user });
 });

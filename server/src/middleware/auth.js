@@ -27,7 +27,7 @@ async function authenticateToken(req, res, next) {
     }
 
     const [users] = await pool.execute(
-      'SELECT id, email, first_name, last_name, is_active FROM users WHERE id = ?',
+      'SELECT id, email, first_name, last_name, username, is_active FROM users WHERE id = ?',
       sanitizeParams([decoded.id])
     );
 

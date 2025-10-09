@@ -68,6 +68,7 @@ export const registerUser = async (req, res, next) => {
         email: email.toLowerCase(),
         firstName,
         lastName,
+        username: userName,
         userName
       }
     });
@@ -197,6 +198,8 @@ export const loginUser = async (req, res, next) => {
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
+        username: user.username,
+        userName: user.username,
         emailVerified: user.email_verified || false
       }
     });
