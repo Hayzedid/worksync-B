@@ -1,4 +1,4 @@
-import { query, transaction } from '../config/postgresql.js';
+import { query, transaction } from '../config/database.js';
 import { cache } from '../config/redis.js';
 import { validateUUID, sanitizeInput } from '../utils/validation.js';
 
