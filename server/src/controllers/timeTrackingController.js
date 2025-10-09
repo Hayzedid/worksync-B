@@ -1,5 +1,5 @@
 import { query, transaction } from '../config/database.js';
-import { cache } from '../config/redis.js';
+// import { cache } from '../config/redis.js'; // Disabled for production
 import { validateUUID, sanitizeInput } from '../utils/validation.js';
 
 /**
@@ -155,7 +155,7 @@ export const startTimer = async (req, res) => {
     });
 
     // Cache active timer
-    await cache.set(`active_timer:${userId}`, result, 3600);
+    // await cache.set(`active_timer:${userId}`, result, 3600); // Disabled for production
 
     // Emit real-time event
     req.io?.to(`user:${userId}`).emit('time:timer:started', result);
@@ -242,7 +242,7 @@ export const stopTimer = async (req, res) => {
     });
 
     // Clear cache
-    await cache.del(`active_timer:${userId}`);
+    // await cache.del(`active_timer:${userId}`); // Disabled for production
 
     // Emit real-time event
     req.io?.to(`user:${userId}`).emit('time:timer:stopped', result);
@@ -301,7 +301,7 @@ export const pauseTimer = async (req, res) => {
     });
 
     // Update cache
-    await cache.set(`active_timer:${userId}`, { ...result, is_paused: true }, 3600);
+    // await cache.set(`active_timer:${userId}`, { ...result, is_paused: true }, 3600); // Disabled for production
 
     // Emit real-time event
     req.io?.to(`user:${userId}`).emit('time:timer:paused', result);
@@ -362,7 +362,7 @@ export const resumeTimer = async (req, res) => {
     });
 
     // Update cache
-    await cache.set(`active_timer:${userId}`, { ...result, is_paused: false }, 3600);
+    // await cache.set(`active_timer:${userId}`, { ...result, is_paused: false }, 3600); // Disabled for production
 
     // Emit real-time event
     req.io?.to(`user:${userId}`).emit('time:timer:resumed', result);
@@ -387,10 +387,10 @@ export const getActiveTimer = async (req, res) => {
     const userId = req.user.id;
 
     // Check cache first
-    const cached = await cache.get(`active_timer:${userId}`);
-    if (cached) {
-      return res.json({ success: true, data: cached });
-    }
+    // const cached = await cache.get(`active_timer:${userId}`); // Disabled for production
+    // if (cached) {
+    //   return res.json({ success: true, data: cached });
+    // }
 
     const result = await query(
       `SELECT at.*, te.*, p.name as project_name
@@ -410,7 +410,7 @@ export const getActiveTimer = async (req, res) => {
       activeTimer.current_duration = currentDuration;
 
       // Cache for 1 minute
-      await cache.set(`active_timer:${userId}`, activeTimer, 60);
+      // await cache.set(`active_timer:${userId}`, activeTimer, 60); // Disabled for production
     }
 
     res.json({
