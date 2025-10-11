@@ -11,6 +11,7 @@
     "migrate-newsletter": "node scripts/runNewsletterMigration.js",
     "add-missing-tables": "node src/scripts/addMissingTables.js",
     "test-db-tables": "node src/scripts/testDatabaseTables.js",
+    "phase1-migration": "node src/database/phase1Migration.js",
     "test": "set NODE_ENV=test && jest --config jest.config.cjs",
     "build": "echo 'No build needed for Node.js server'"
   },

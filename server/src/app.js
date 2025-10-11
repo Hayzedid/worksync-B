@@ -47,6 +47,17 @@ import newsletterRoutes from './routes/newsletter.js';
 import searchRoutes from './routes/search.js';
 import timeTrackingRoutes from './routes/timeTracking.js';
 
+// Phase 1 Enhancement Routes
+import customFieldsRoutes from './routes/customFields.js';
+import favoritesRoutes from './routes/favorites.js';
+import pinnedItemsRoutes from './routes/pinnedItems.js';
+import recentItemsRoutes from './routes/recentItems.js';
+import taskTemplatesRoutes from './routes/taskTemplates.js';
+import savedFiltersRoutes from './routes/savedFilters.js';
+import actionHistoryRoutes from './routes/actionHistory.js';
+import exportSystemRoutes from './routes/exportSystem.js';
+import globalSearchRoutes from './routes/globalSearch.js';
+
 const app = express();
 
 // Trust proxy for proper client IP detection on Render/Heroku/etc
@@ -117,6 +128,18 @@ if (minimalRoutes) {
   app.use('/api/search', searchRoutes);
   // Time Tracking Routes
   app.use('/api/time-tracking', authenticateToken, timeTrackingRoutes);
+  
+  // Phase 1 Enhancement Routes
+  app.use('/api/custom-fields', authenticateToken, customFieldsRoutes);
+  app.use('/api/favorites', authenticateToken, favoritesRoutes);
+  app.use('/api/pinned-items', authenticateToken, pinnedItemsRoutes);
+  app.use('/api/recent-items', authenticateToken, recentItemsRoutes);
+  app.use('/api/task-templates', authenticateToken, taskTemplatesRoutes);
+  app.use('/api/saved-filters', authenticateToken, savedFiltersRoutes);
+  app.use('/api/action-history', authenticateToken, actionHistoryRoutes);
+  app.use('/api/exports', authenticateToken, exportSystemRoutes);
+  app.use('/api/global-search', authenticateToken, globalSearchRoutes);
+  
   // Phase 2 Collaboration Routes
   app.use('/api/presence', authenticateToken, rateLimiters.realtime, presenceRoutes);
   app.use('/api/collaboration', authenticateToken, rateLimiters.realtime, collaborationRoutes);

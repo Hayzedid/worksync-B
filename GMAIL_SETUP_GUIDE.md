@@ -40,11 +40,11 @@ const gmailConfig = {
 };
 ```
 
-## 🧪 **Test with iazeez775@gmail.com**
+## 🧪 **Testing (local)**
 
-Once configured, the system will:
-1. ✅ Send real welcome emails to new subscribers
-2. ✅ Deliver emails to iazeez775@gmail.com
+Once configured locally, the system will:
+1. ✅ Send welcome emails to test addresses you control
+2. ✅ Deliver emails to those addresses (check your inbox)
 3. ✅ Track email delivery and statistics
 4. ✅ Handle unsubscribe requests
 
@@ -81,12 +81,12 @@ Once configured, the system will:
 
 ## ✅ **Success Indicators**
 
-When working correctly, you'll see:
+When working correctly, you'll see (local test output):
 ```
 ✅ Gmail connection verified successfully!
 ✅ Test email sent successfully!
 📧 Message ID: <message-id>
-📬 Email sent to: iazeez775@gmail.com
+📬 Email sent to: you@example.com
 ```
 
 ## 🎉 **Ready to Send Real Emails!**

@@ -11,6 +11,86 @@ export async function deleteTaskById(req, res, next) {
     return res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 }
+
+// Reorder tasks
+export async function reorderTasks(req, res, next) {
+  try {
+    const { tasks } = req.body;
+    const userId = req.user.id;
+
+    if (!Array.isArray(tasks)) {
+      return res.status(400).json({ success: false, message: 'Tasks must be an array' });
+    }
+
+    // Update task orders in the database
+    const updatePromises = tasks.map(task => 
+      updateTaskService(task.id, { position: task.order }, userId)
+    );
+
+    await Promise.all(updatePromises);
+
+    return res.json({ success: true, message: 'Tasks reordered successfully' });
+  } catch (error) {
+    console.error('Error reordering tasks:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+}
+
+// Bulk update tasks
+export async function bulkUpdateTasks(req, res, next) {
+  try {
+    const { taskIds, updates } = req.body;
+    const userId = req.user.id;
+
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Task IDs must be a non-empty array' });
+    }
+
+    if (!updates || typeof updates !== 'object') {
+      return res.status(400).json({ success: false, message: 'Updates object is required' });
+    }
+
+    // Update all tasks with the provided updates
+    const updatePromises = taskIds.map(taskId => 
+      updateTaskService(taskId, updates, userId)
+    );
+
+    await Promise.all(updatePromises);
+
+    return res.json({ 
+      success: true, 
+      message: `${taskIds.length} task${taskIds.length !== 1 ? 's' : ''} updated successfully` 
+    });
+  } catch (error) {
+    console.error('Error bulk updating tasks:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+}
+
+// Bulk delete tasks
+export async function bulkDeleteTasks(req, res, next) {
+  try {
+    const { taskIds } = req.body;
+
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Task IDs must be a non-empty array' });
+    }
+
+    // Delete all tasks
+    const deletePromises = taskIds.map(taskId => deleteTaskService(taskId));
+    const results = await Promise.all(deletePromises);
+
+    const deletedCount = results.filter(result => result > 0).length;
+
+    return res.json({ 
+      success: true, 
+      message: `${deletedCount} task${deletedCount !== 1 ? 's' : ''} deleted successfully` 
+    });
+  } catch (error) {
+    console.error('Error bulk deleting tasks:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+}
 // Controller to get tasks by project for a user (for nested project routes)
 import { getTasksByProjectForUser } from '../models/Task.js';
 

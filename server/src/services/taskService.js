@@ -9,7 +9,9 @@ import {
 } from '../models/Task.js';
 
 export async function getTasksService(userId, limit, offset, workspaceId) {
-  return getAllTasksByUser(userId, limit, offset, workspaceId);
+  const tasks = await getAllTasksByUser(userId, limit, offset, workspaceId);
+  // Sort by position for drag-and-drop ordering
+  return tasks.sort((a, b) => (a.position || 0) - (b.position || 0));
 }
 
 export async function getSingleTaskService(taskId) {

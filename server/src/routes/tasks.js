@@ -15,7 +15,10 @@ import {
     getReactionsController,
     listViewController,
     calendarViewController,
-    getTaskStatusOptions
+    getTaskStatusOptions,
+    reorderTasks,
+    bulkUpdateTasks,
+    bulkDeleteTasks
 } from '../controllers/taskController.js';
 import { validateTask, validateTaskUpdate } from '../utils/validator.js';
 import { validateRequest } from '../middleware/validation.js';
@@ -31,6 +34,9 @@ router.get('/search', searchTasksController);
 router.get('/list', listViewController);
 router.get('/calendar', calendarViewController);
 router.get('/assigned', fetchAssignedTasks);
+router.put('/reorder', reorderTasks);
+router.put('/bulk-update', bulkUpdateTasks);
+router.delete('/bulk-delete', bulkDeleteTasks);
 router.post('/reactions', addReactionController);
 router.delete('/reactions/:id', removeReactionController);
 router.get('/reactions', getReactionsController);

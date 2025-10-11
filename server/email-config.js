@@ -13,53 +13,28 @@ const gmailConfig = {
 };
 
 // Create transporter
-const transporter = nodemailer.createTransporter(gmailConfig);
+const transporter = nodemailer.createTransport(gmailConfig);
 
-// Test email function
-async function testEmail() {
-  try {
-    // Verify connection
-    await transporter.verify();
-    console.log('✅ Gmail connection verified successfully!');
-    
-    // Send test email
-    const mailOptions = {
-      from: 'WorkSync <noreply@worksync.ng>',
-      to: 'iazeez775@gmail.com',
-      subject: 'Test Email from WorkSync Newsletter System',
-      html: `
-        <h2>🎉 Test Email Successful!</h2>
-        <p>This is a test email from the WorkSync newsletter system.</p>
-        <p>If you received this email, the system is working correctly!</p>
-        <br>
-        <p>Best regards,<br>WorkSync Team</p>
-      `,
-      text: `
-        Test Email Successful!
-        
-        This is a test email from the WorkSync newsletter system.
-        If you received this email, the system is working correctly!
-        
-        Best regards,
-        WorkSync Team
-      `
-    };
-    
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Test email sent successfully!');
-    console.log('📧 Message ID:', result.messageId);
-    console.log('📬 Email sent to: iazeez775@gmail.com');
-    
-  } catch (error) {
-    console.error('❌ Email test failed:', error.message);
-    console.log('\n🔧 Setup Instructions:');
-    console.log('1. Go to your Google Account settings');
-    console.log('2. Enable 2-Factor Authentication');
-    console.log('3. Generate an App Password for "Mail"');
-    console.log('4. Replace the credentials in this file');
-    console.log('5. Run: node email-config.js');
-  }
-}
+// Export transporter for application use. Do not auto-send test emails from checked-in files.
+export { transporter };
 
-// Run the test
-testEmail();
+/*
+  Usage (local only):
+  - Create a local, untracked `server/.env` with real credentials.
+  - Then run a one-off test from your machine (do NOT commit test scripts that contain real creds):
+
+    import { transporter } from './email-config.js';
+
+    async function testEmailLocal() {
+      await transporter.verify();
+      await transporter.sendMail({
+        from: 'WorkSync <noreply@worksync.ng>',
+        to: 'you@example.com', // replace with a real address you control
+        subject: 'Test Email',
+        text: 'This is a local test email.'
+      });
+      console.log('Local test email sent');
+    }
+
+  This keeps the repository free of hard-coded recipient addresses and passwords.
+*/
